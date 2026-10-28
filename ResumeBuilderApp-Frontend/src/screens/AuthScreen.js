@@ -64,8 +64,7 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       const res = await register(fullName, email, password);
       if (res.success) {
         setMode('verify');
-        const codeNote = res.verificationCode ? ` (OTP: ${res.verificationCode})` : '';
-        setInfoMessage(`Verification code sent to ${email}.${codeNote} Enter the 6-digit code below.`);
+        setInfoMessage(`A 6-digit verification code has been sent to ${email}. Please check your email inbox.`);
       } else {
         setLocalError(res.error);
       }

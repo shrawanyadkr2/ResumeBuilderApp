@@ -19,12 +19,36 @@ import java.util.concurrent.CompletableFuture;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    private final java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(12))
+            .build();
 
     @Value("${spring.mail.username:${spring.mail.properties.mail.smtp.from:noreply@skydevx.com}}")
     private String fromEmail;
 
+    @Value("${resend.api-key:${RESEND_API_KEY:}}")
+    private String resendApiKey;
+
+    @Value("${brevo.api-key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
+
     public void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException, java.io.UnsupportedEncodingException {
-        log.info("Sending HTML email to recipient: [{}] with subject: [{}] from: [{}]", to, subject, fromEmail);
+        // Option 1: Resend HTTP API (Port 443 - Bypasses all Render free tier SMTP blocks)
+        if (resendApiKey != null && !resendApiKey.isBlank()) {
+            sendViaResend(to, subject, htmlContent);
+            return;
+        }
+
+        // Option 2: Brevo HTTP API (Port 443 - Bypasses all Render free tier SMTP blocks)
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            sendViaBrevo(to, subject, htmlContent);
+            return;
+        }
+
+        // Option 3: Standard SMTP (Requires ports 587 or 465 to be unblocked by hosting provider)
+        log.info("Sending HTML email to recipient: [{}] via SMTP from: [{}]", to, fromEmail);
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom(fromEmail, "Resume Genie");
@@ -33,6 +57,63 @@ public class EmailService {
         helper.setText(htmlContent, true);
         mailSender.send(message);
         log.info("HTML email successfully submitted to SMTP server for [{}]", to);
+    }
+
+    private void sendViaResend(String to, String subject, String htmlContent) {
+        try {
+            log.info("Sending email to [{}] via Resend HTTP API (Port 443)", to);
+            java.util.Map<String, Object> payload = java.util.Map.of(
+                    "from", "Resume Genie <onboarding@resend.dev>",
+                    "to", java.util.List.of(to),
+                    "subject", subject,
+                    "html", htmlContent
+            );
+            String json = objectMapper.writeValueAsString(payload);
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + resendApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json, java.nio.charset.StandardCharsets.UTF_8))
+                    .build();
+
+            java.net.http.HttpResponse<String> response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            log.info("Resend HTTP API result: status [{}], response [{}]", response.statusCode(), response.body());
+            if (response.statusCode() >= 400) {
+                log.error("Resend API rejected email dispatch: {}", response.body());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send email via Resend API: {}", e.getMessage(), e);
+        }
+    }
+
+    private void sendViaBrevo(String to, String subject, String htmlContent) {
+        try {
+            log.info("Sending email to [{}] via Brevo HTTP API (Port 443)", to);
+            String senderEmail = (fromEmail != null && fromEmail.contains("@")) ? fromEmail : "noreply@skydevx.com";
+            java.util.Map<String, Object> payload = java.util.Map.of(
+                    "sender", java.util.Map.of("name", "Resume Genie", "email", senderEmail),
+                    "to", java.util.List.of(java.util.Map.of("email", to)),
+                    "subject", subject,
+                    "htmlContent", htmlContent
+            );
+            String json = objectMapper.writeValueAsString(payload);
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("api-key", brevoApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json, java.nio.charset.StandardCharsets.UTF_8))
+                    .build();
+
+            java.net.http.HttpResponse<String> response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            log.info("Brevo HTTP API result: status [{}], response [{}]", response.statusCode(), response.body());
+            if (response.statusCode() >= 400) {
+                log.error("Brevo API rejected email dispatch: {}", response.body());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send email via Brevo API: {}", e.getMessage(), e);
+        }
     }
 
     public void sendEmailWithAttachment(String to, String subject, String body, byte[] attachment, String filename)

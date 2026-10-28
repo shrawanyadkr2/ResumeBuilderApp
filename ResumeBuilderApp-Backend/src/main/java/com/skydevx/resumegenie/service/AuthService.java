@@ -201,7 +201,6 @@ public class AuthService {
                 .profileImageUrl(user.getProfileImageUrl())
                 .subscriptionPlan(user.getSubscriptionPlan())
                 .emailVerified(user.isEmailVerified())
-                .verificationCode(user.getVerificationToken())
                 .token(token)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
