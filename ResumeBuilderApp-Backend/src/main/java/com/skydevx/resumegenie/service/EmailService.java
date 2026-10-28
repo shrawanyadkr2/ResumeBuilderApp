@@ -20,14 +20,14 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.properties.mail.smtp.from:noreply@skydevx.com}")
+    @Value("${spring.mail.username:${spring.mail.properties.mail.smtp.from:noreply@skydevx.com}}")
     private String fromEmail;
 
-    public void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException {
-        log.info("Sending HTML email to recipient: [{}] with subject: [{}]", to, subject);
+    public void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException, java.io.UnsupportedEncodingException {
+        log.info("Sending HTML email to recipient: [{}] with subject: [{}] from: [{}]", to, subject, fromEmail);
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromEmail);
+        helper.setFrom(fromEmail, "Resume Genie");
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlContent, true);
@@ -98,7 +98,7 @@ public class EmailService {
 
                 sendHtmlEmail(to, "Verify your Resume Genie Account - sky.devX", html);
             } catch (Exception e) {
-                log.warn("Failed to dispatch verification email to [{}]: {}", to, e.getMessage());
+                log.error("Failed to dispatch verification email to [{}]: {}", to, e.getMessage(), e);
             }
         });
     }
