@@ -312,9 +312,6 @@ export const AuthProvider = ({ children }) => {
         setUser(freshUser);
         return { success: true, message: 'Payment verified! Account upgraded to PLUS (Test Gateway).' };
       }
-        setUser(freshUser);
-        return { success: true, message: 'Upgraded to PLUS successfully (Test Mode)!' };
-      }
     } catch (err) {
       const msg = err.message || 'Payment initiation failed';
       setError(msg);
