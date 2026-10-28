@@ -104,11 +104,18 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await authApi.login({ email, password });
       const authData = res?.data || res;
+      const userProfile = formatUserProfile(authData, '', email);
+
+      if (!userProfile.isEmailVerified) {
+        setUser(null);
+        setPendingVerificationEmail(email);
+        return { success: false, requireVerification: true, error: 'Please enter your 6-digit verification code.' };
+      }
+
       if (authData?.token) {
         await apiClient.setToken(authData.token);
         setToken(authData.token);
       }
-      const userProfile = formatUserProfile(authData, '', email);
       setUser(userProfile);
       return { success: true, data: userProfile };
     } catch (err) {
@@ -129,22 +136,16 @@ export const AuthProvider = ({ children }) => {
       const authData = res?.data || res;
       const userProfile = formatUserProfile(authData, fullName, email);
 
-      if (authData?.token) {
-        await apiClient.setToken(authData.token);
-        setToken(authData.token);
-      }
-
-      // If the account is already verified or verification is disabled, sign in directly
-      if (userProfile.isEmailVerified) {
-        setUser(userProfile);
-        setPendingVerificationEmail(null);
-        return { success: true, data: userProfile, requireVerification: false };
-      }
-
-      // Store initial user state with full registered details
-      setUser(userProfile);
+      // Never auto-login immediately on registration: enforce 6-digit verification step
+      setUser(null);
       setPendingVerificationEmail(email);
-      return { success: true, data: userProfile, requireVerification: true };
+
+      return {
+        success: true,
+        data: userProfile,
+        requireVerification: true,
+        verificationCode: authData?.verificationCode || null,
+      };
     } catch (err) {
       const msg = err.message || 'Registration failed';
       setError(msg);

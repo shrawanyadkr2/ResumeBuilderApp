@@ -63,12 +63,9 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       }
       const res = await register(fullName, email, password);
       if (res.success) {
-        if (!res.requireVerification) {
-          if (onSuccess) onSuccess();
-        } else {
-          setMode('verify');
-          setInfoMessage(`Verification code sent to ${email}. Check your inbox!`);
-        }
+        setMode('verify');
+        const codeNote = res.verificationCode ? ` (OTP: ${res.verificationCode})` : '';
+        setInfoMessage(`Verification code sent to ${email}.${codeNote} Enter the 6-digit code below.`);
       } else {
         setLocalError(res.error);
       }
@@ -76,6 +73,9 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       const res = await login(email, password);
       if (res.success) {
         if (onSuccess) onSuccess();
+      } else if (res.requireVerification) {
+        setMode('verify');
+        setInfoMessage('Please enter your 6-digit verification code to activate your account.');
       } else {
         setLocalError(res.error);
       }

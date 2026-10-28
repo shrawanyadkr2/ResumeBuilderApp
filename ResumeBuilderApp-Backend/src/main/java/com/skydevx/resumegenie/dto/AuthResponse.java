@@ -20,6 +20,7 @@ public class AuthResponse {
     private String profileImageUrl;
     private String subscriptionPlan;
     private boolean emailVerified;
+    private String verificationCode;
 
     @JsonProperty("emailVarified")
     public boolean isEmailVarified() {

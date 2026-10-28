@@ -57,13 +57,14 @@ public class AuthController {
         if (token == null || token.isBlank()) {
             token = request.get("code");
         }
+        String email = request.get("email");
         if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest().body(ApiResponse.<AuthResponse>builder()
                     .success(false)
                     .message("Verification code or token is required")
                     .build());
         }
-        AuthResponse response = authService.verifyEmail(token);
+        AuthResponse response = authService.verifyEmail(email, token);
         return ResponseEntity.ok(ApiResponse.ok("Email verified successfully!", response));
     }
 
