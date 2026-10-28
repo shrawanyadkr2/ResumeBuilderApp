@@ -51,17 +51,27 @@ public class FileUploadService {
     public Map<String, String> uploadSingleImage(MultipartFile file, String folder) throws IOException {
         validateImageFile(file);
 
-        Map<String, Object> uploadParams = ObjectUtils.asMap(
-                "folder", "resumegenie/" + (folder != null ? folder : "general"),
-                "resource_type", "image",
-                "overwrite", true
-        );
+        if (cloudinary != null && cloudinary.config.cloudName != null && !cloudinary.config.cloudName.isBlank()) {
+            try {
+                Map<String, Object> uploadParams = ObjectUtils.asMap(
+                        "folder", "resumegenie/" + (folder != null ? folder : "general"),
+                        "resource_type", "image",
+                        "overwrite", true
+                );
 
-        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
-        String secureUrl = (String) uploadResult.get("secure_url");
-        log.info("Cloudinary upload successful. Resource URL: {}", secureUrl);
+                Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+                String secureUrl = (String) uploadResult.get("secure_url");
+                log.info("Cloudinary upload successful. Resource URL: {}", secureUrl);
+                return Map.of("imageUrl", secureUrl);
+            } catch (Exception e) {
+                log.warn("Cloudinary upload failed ({}), falling back to direct base64 data URI storage.", e.getMessage());
+            }
+        }
 
-        return Map.of("imageUrl", secureUrl);
+        String mime = (file.getContentType() != null) ? file.getContentType() : "image/jpeg";
+        String base64Url = "data:" + mime + ";base64," + java.util.Base64.getEncoder().encodeToString(file.getBytes());
+        log.info("Direct Base64 image encoded successfully (size: {} bytes)", file.getSize());
+        return Map.of("imageUrl", base64Url);
     }
 
     public Map<String, String> uploadResumeImages(String resumeId,

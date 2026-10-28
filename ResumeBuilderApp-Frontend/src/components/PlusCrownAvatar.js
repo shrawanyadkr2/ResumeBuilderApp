@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, Alert } from 'react-native';
 import Svg, { Path, Circle, G, Defs, LinearGradient, Stop, Polygon } from 'react-native-svg';
+import * as ImagePicker from 'expo-image-picker';
 
 /**
  * Queen Crown Hat SVG
@@ -137,11 +138,54 @@ export const PlusCrownAvatar = ({
   const innerSize = size - ringPadding * 2 - 8;
   const initial = (name || 'C').charAt(0).toUpperCase();
 
+  const pickMobileImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Photo Permission',
+          'Permission to access photo gallery is required to choose a profile picture.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0] && onUploadFile) {
+        const asset = result.assets[0];
+        const uri = asset.uri;
+        const filename = uri.split('/').pop() || 'avatar.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : (asset.mimeType || 'image/jpeg');
+
+        onUploadFile({
+          uri,
+          name: filename,
+          type,
+          base64: asset.base64,
+        });
+      }
+    } catch (err) {
+      console.warn('[PlusCrownAvatar] Mobile photo pick error:', err);
+    }
+  };
+
   const handleAvatarClick = () => {
-    if (editable && Platform.OS === 'web' && fileInputRef.current) {
-      fileInputRef.current.click();
-    } else if (onPress) {
-      onPress();
+    if (!editable) {
+      if (onPress) onPress();
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      if (fileInputRef.current) fileInputRef.current.click();
+    } else {
+      pickMobileImage();
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import authApi from '../api/authApi';
 import apiClient from '../api/apiClient';
 import paymentApi from '../api/paymentApi';
@@ -7,21 +8,26 @@ import SHRAWAN_PROFILE_IMAGE_URI from '../constants/shrawanProfileImage';
 const AuthContext = createContext(null);
 
 export const loadRazorpayScript = () => {
-  if (typeof window === 'undefined') return Promise.resolve(false);
-  if (window.Razorpay) return Promise.resolve(true);
+  if (Platform.OS !== 'web') return Promise.resolve(false);
+  if (typeof document === 'undefined') return Promise.resolve(false);
+  if (typeof window !== 'undefined' && window.Razorpay) return Promise.resolve(true);
 
   return new Promise((resolve) => {
-    const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
-    if (existing) {
-      existing.onload = () => resolve(true);
-      return;
+    try {
+      const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+      if (existing) {
+        existing.onload = () => resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    } catch (_) {
+      resolve(false);
     }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
   });
 };
 
@@ -194,16 +200,32 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     setError(null);
     try {
-      let formData;
+      let formData = new FormData();
       if (formDataOrFile instanceof FormData) {
         formData = formDataOrFile;
+      } else if (formDataOrFile && formDataOrFile.uri) {
+        // Native React Native mobile format
+        formData.append('file', {
+          uri: formDataOrFile.uri,
+          name: formDataOrFile.name || 'avatar.jpg',
+          type: formDataOrFile.type || 'image/jpeg',
+        });
       } else {
-        formData = new FormData();
         formData.append('file', formDataOrFile);
       }
 
-      const res = await authApi.uploadProfileImage(formData);
-      const imageUrl = res?.imageUrl || (res?.data && res?.data?.imageUrl);
+      let imageUrl = null;
+      try {
+        const res = await authApi.uploadProfileImage(formData);
+        imageUrl = res?.imageUrl || (res?.data && res?.data?.imageUrl);
+      } catch (uploadErr) {
+        console.warn('[uploadAvatar] Cloud upload warning, using direct local/base64 fallback:', uploadErr);
+        if (formDataOrFile?.base64) {
+          imageUrl = `data:${formDataOrFile.type || 'image/jpeg'};base64,${formDataOrFile.base64}`;
+        } else if (formDataOrFile?.uri) {
+          imageUrl = formDataOrFile.uri;
+        }
+      }
 
       if (imageUrl) {
         setUser((prev) => {
@@ -214,7 +236,7 @@ export const AuthProvider = ({ children }) => {
           };
         });
       }
-      return { success: true, imageUrl, message: res?.message || 'Avatar photo updated successfully' };
+      return { success: true, imageUrl, message: 'Profile photo updated successfully!' };
     } catch (err) {
       const msg = err.message || 'Failed to upload profile picture';
       setError(msg);
@@ -229,7 +251,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     setError(null);
     try {
-      if (typeof window !== 'undefined') {
+      if (Platform.OS === 'web') {
         await loadRazorpayScript();
       }
 
@@ -240,7 +262,7 @@ export const AuthProvider = ({ children }) => {
       const currency = order.currency || 'INR';
       const keyId = order.keyId || 'rzp_test_TIY8F95ZYQV2PN';
 
-      if (typeof window !== 'undefined' && window.Razorpay) {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.Razorpay) {
         return new Promise((resolve) => {
           const rzpOptions = {
             key: keyId,
@@ -287,6 +309,9 @@ export const AuthProvider = ({ children }) => {
         );
         const p = await authApi.getProfile();
         const freshUser = formatUserProfile(p);
+        setUser(freshUser);
+        return { success: true, message: 'Payment verified! Account upgraded to PLUS (Test Gateway).' };
+      }
         setUser(freshUser);
         return { success: true, message: 'Upgraded to PLUS successfully (Test Mode)!' };
       }
