@@ -7,33 +7,30 @@ import { Platform } from 'react-native';
  */
 
 // Production base URL when deployed
-const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://resume-genie-backend.onrender.com';
+const LIVE_RENDER_URL = 'https://resumebuilderapp-jux7.onrender.com';
+const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL || LIVE_RENDER_URL;
 
 // Development URL resolver based on platform
 const getDevApiUrl = () => {
   const configured = process.env.EXPO_PUBLIC_API_URL;
   // If explicitly configured with an IP or domain, use it
-  if (configured && !configured.includes('localhost') && !configured.includes('127.0.0.1')) {
+  if (configured) {
     return configured;
   }
 
-  if (Platform.OS === 'web') {
-    return 'http://localhost:8080';
-  }
-  
-  // On physical Android or iOS device running Expo Go, connect to the dev machine's Wi-Fi LAN IP
-  return 'http://192.168.1.7:8080';
+  // Connect directly to live Render backend by default
+  return LIVE_RENDER_URL;
 };
 
 const isProd = process.env.NODE_ENV === 'production';
 
 export const ENV = {
   isProduction: isProd,
-  apiUrl: isProd ? PROD_API_URL : (process.env.EXPO_PUBLIC_API_URL || getDevApiUrl()),
+  apiUrl: process.env.EXPO_PUBLIC_API_URL || LIVE_RENDER_URL,
   appName: 'Resume Genie',
   appVersion: '1.0.0',
   creator: 'sky.devX',
-  defaultTimeoutMs: 15000,
+  defaultTimeoutMs: 25000,
   razorpayKeyId: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TIY8F95ZYQV2PN',
 };
 

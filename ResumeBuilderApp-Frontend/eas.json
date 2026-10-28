@@ -13,7 +13,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://resume-genie-backend.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://resumebuilderapp-jux7.onrender.com",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_test_TIY8F95ZYQV2PN"
       }
     },
     "production": {
@@ -21,7 +22,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://resume-genie-backend.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://resumebuilderapp-jux7.onrender.com",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_test_TIY8F95ZYQV2PN"
       }
     }
   },
