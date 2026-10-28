@@ -1,0 +1,102 @@
+package com.skydevx.resumegenie.service;
+
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.skydevx.resumegenie.document.Resume;
+import com.skydevx.resumegenie.document.User;
+import com.skydevx.resumegenie.exception.ResourceNotFoundException;
+import com.skydevx.resumegenie.repository.ResumeRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class FileUploadService {
+
+    private final Cloudinary cloudinary;
+    private final AuthService authService;
+    private final ResumeRepository resumeRepository;
+
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+    );
+
+    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+    public void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("No file provided for upload.");
+        }
+
+        if (file.getSize() > MAX_IMAGE_SIZE_BYTES) {
+            throw new IllegalArgumentException("Image file size exceeds the maximum permitted limit of 5MB.");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("Unsupported image format [" + contentType + "]. Only JPEG, PNG, and WebP are allowed.");
+        }
+    }
+
+    public Map<String, String> uploadSingleImage(MultipartFile file, String folder) throws IOException {
+        validateImageFile(file);
+
+        Map<String, Object> uploadParams = ObjectUtils.asMap(
+                "folder", "resumegenie/" + (folder != null ? folder : "general"),
+                "resource_type", "image",
+                "overwrite", true
+        );
+
+        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+        String secureUrl = (String) uploadResult.get("secure_url");
+        log.info("Cloudinary upload successful. Resource URL: {}", secureUrl);
+
+        return Map.of("imageUrl", secureUrl);
+    }
+
+    public Map<String, String> uploadResumeImages(String resumeId,
+                                                  User user,
+                                                  MultipartFile thumbnail,
+                                                  MultipartFile profileImage) throws IOException {
+        Resume resume = resumeRepository.findByUserIdAndId(user.getId(), resumeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
+
+        Map<String, String> result = new HashMap<>();
+
+        if (thumbnail != null && !thumbnail.isEmpty()) {
+            Map<String, String> thumbUpload = uploadSingleImage(thumbnail, "thumbnails");
+            resume.setThumbnailLink(thumbUpload.get("imageUrl"));
+            result.put("thumbnailLink", thumbUpload.get("imageUrl"));
+        }
+
+        if (profileImage != null && !profileImage.isEmpty()) {
+            Map<String, String> profUpload = uploadSingleImage(profileImage, "avatars");
+            if (resume.getProfileInfo() == null) {
+                resume.setProfileInfo(new Resume.ProfileInfo());
+            }
+            resume.getProfileInfo().setProfilePreviewUrl(profUpload.get("imageUrl"));
+            result.put("profilePreviewUrl", profUpload.get("imageUrl"));
+        }
+
+        resumeRepository.save(resume);
+        result.put("message", "Images uploaded and attached to resume successfully.");
+        return result;
+    }
+
+    public Map<String, String> uploadUserProfileImage(User user, MultipartFile file) throws IOException {
+        Map<String, String> uploadResult = uploadSingleImage(file, "users");
+        String imageUrl = uploadResult.get("imageUrl");
+        authService.updateProfileImage(user, imageUrl);
+        return Map.of("imageUrl", imageUrl, "message", "User profile photo updated successfully.");
+    }
+}

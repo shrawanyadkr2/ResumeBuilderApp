@@ -1,0 +1,111 @@
+# Resume Genie - Shared Configuration (Base)
+# Branding: sky.devX
+spring:
+  application:
+    name: resume-genie-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 15MB
+      max-request-size: 20MB
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:${MONGODB_URI}}
+      database: ${MONGODB_DATABASE:resumegenie}
+      auto-index-creation: true
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp-relay.brevo.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: ${SPRING_MAIL_HOST:smtp-relay.brevo.com}
+          from: ${SPRING_MAIL_FROM:noreply@skydevx.com}
+    protocol: smtp
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+# Application URL and security configuration
+app:
+  branding: "sky.devX"
+  name: "Resume Genie"
+  client:
+    url: ${APP_BASE_URL:http://localhost:8081}
+  backend:
+    url: ${BACKEND_BASE_URL:http://localhost:8080}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006,http://localhost:3000,http://localhost:5173}
+  verification:
+    required: ${EMAIL_VERIFICATION_REQUIRED:true}
+  entitlements:
+    free:
+      max-resumes: 3
+      allowed-templates: "modern-01,minimal-02"
+      watermark-enabled: true
+      priority-export: false
+    plus:
+      max-resumes: 100
+      allowed-templates: "modern-01,minimal-02,executive-03,creative-04,tech-05"
+      watermark-enabled: false
+      priority-export: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:devDefaultSecretKeyForResumeGenieMustBeAtLeast32BytesLongLocalDevOnly!}
+  expiration: ${JWT_EXPIRATION:${JWT_EXPIRATION_MS:86400000}}
+
+# Cloudinary Storage Configuration
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+
+# Razorpay Payment Gateway Configuration
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID:rzp_test_TIY8F95ZYQV2PN}
+    secret: ${RAZORPAY_KEY_SECRET:zG91YL3lbzo3T9c3ypbeMLyk}
+  webhook:
+    secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  plus-plan-amount: 49900 # In paise: INR 499.00
+  currency: INR
+
+# Actuator Health & Metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+  health:
+    mongo:
+      enabled: false # Avoid blocking health check if MongoDB connection pool initializes lazily
+    mail:
+      enabled: false
+
+# Springdoc OpenAPI (Swagger) Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method

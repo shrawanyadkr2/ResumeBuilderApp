@@ -1,0 +1,11 @@
+{
+  "name": "resumebuilder-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix ResumeBuilderApp-Frontend run dev",
+    "web": "npm --prefix ResumeBuilderApp-Frontend run web",
+    "start": "npm --prefix ResumeBuilderApp-Frontend start",
+    "android": "npm --prefix ResumeBuilderApp-Frontend run android"
+  }
+}

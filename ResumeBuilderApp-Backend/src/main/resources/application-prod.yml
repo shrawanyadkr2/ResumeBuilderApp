@@ -1,0 +1,34 @@
+# Resume Genie - Production Profile Configuration
+# Profile: prod
+spring:
+  config:
+    activate:
+      on-profile: prod
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+      database: ${MONGODB_DATABASE:resumegenie}
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+logging:
+  level:
+    root: WARN
+    com.skydevx.resumegenie: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+app:
+  environment: prod
+  verification:
+    required: ${EMAIL_VERIFICATION_REQUIRED:true} # Production enforces email verification by default
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: resume-genie-backend
+    env: docker
+    dockerfilePath: ./ResumeBuilderApp-Backend/Dockerfile
+    dockerContext: ./ResumeBuilderApp-Backend
+    plan: free
+    region: oregon
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 8080
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RAZORPAY_KEY_ID
+        value: rzp_test_TIY8F95ZYQV2PN
+      - key: RAZORPAY_KEY_SECRET
+        value: zG91YL3lbzo3T9c3ypbeMLyk
+      - key: CORS_ALLOWED_ORIGINS
+        value: http://localhost:8081,https://resume-genie.onrender.com,http://localhost:19006
+      - key: EMAIL_VERIFICATION_REQUIRED
+        value: "false"
