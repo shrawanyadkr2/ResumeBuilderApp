@@ -298,13 +298,6 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
-      const msg = err.message || 'Failed to upload profile picture';
-      setError(msg);
-      return { success: false, error: msg };
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Razorpay Upgrade to PLUS
   const upgradeToPlus = async () => {
