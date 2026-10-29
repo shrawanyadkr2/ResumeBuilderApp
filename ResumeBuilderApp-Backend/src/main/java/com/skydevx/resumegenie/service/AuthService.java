@@ -126,7 +126,7 @@ public class AuthService {
         return toAuthResponse(savedUser, jwtToken);
     }
 
-    public void resendVerification(String email) {
+    public String resendVerification(String email) {
         log.info("Resending verification email to: [{}]", email);
 
         User user = userRepository.findByEmail(email.toLowerCase().trim())
@@ -149,6 +149,7 @@ public class AuthService {
         } catch (Exception emailEx) {
             log.error("Could not dispatch resend verification email: {}", emailEx.getMessage());
         }
+        return code;
     }
 
     public void forgotPassword(String email) {
@@ -226,6 +227,7 @@ public class AuthService {
                 .subscriptionPlan(user.getSubscriptionPlan())
                 .emailVerified(user.isEmailVerified())
                 .token(token)
+                .verificationCode(!user.isEmailVerified() ? user.getVerificationToken() : null)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

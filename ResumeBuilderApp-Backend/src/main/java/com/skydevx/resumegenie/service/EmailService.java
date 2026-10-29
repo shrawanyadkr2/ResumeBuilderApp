@@ -176,6 +176,54 @@ public class EmailService {
         log.info("Email with attachment successfully submitted for [{}]", to);
     }
 
+    public java.util.Map<String, Object> testSendEmail(String to) {
+        java.util.Map<String, Object> debugInfo = new java.util.HashMap<>();
+        debugInfo.put("to", to);
+        boolean hasKey = (resendApiKey != null && !resendApiKey.isBlank());
+        debugInfo.put("resendApiKeyPresent", hasKey);
+        debugInfo.put("resendApiKeyPrefix", (hasKey && resendApiKey.length() > 6) ? resendApiKey.substring(0, 7) + "..." : "none");
+        debugInfo.put("fromEmail", fromEmail);
+
+        if (hasKey) {
+            try {
+                java.util.Map<String, Object> payload = java.util.Map.of(
+                        "from", "Resume Genie <onboarding@resend.dev>",
+                        "to", java.util.List.of(to),
+                        "subject", "Test Verification Email - Resume Genie",
+                        "html", "<p>Hello from Resume Genie! Your email dispatch is working perfectly.</p>"
+                );
+                String json = objectMapper.writeValueAsString(payload);
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://api.resend.com/emails"))
+                        .header("Authorization", "Bearer " + resendApiKey.trim())
+                        .header("Content-Type", "application/json")
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json, java.nio.charset.StandardCharsets.UTF_8))
+                        .build();
+
+                java.net.http.HttpResponse<String> response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                debugInfo.put("resendStatusCode", response.statusCode());
+                debugInfo.put("resendResponseBody", response.body());
+                if (response.statusCode() < 400) {
+                    debugInfo.put("status", "SUCCESS");
+                    return debugInfo;
+                }
+            } catch (Exception e) {
+                debugInfo.put("resendException", e.getMessage());
+            }
+        }
+
+        try {
+            sendHtmlEmail(to, "Test Verification Email - Resume Genie", "<p>Hello! Email dispatch via SMTP.</p>");
+            debugInfo.put("smtpStatus", "SUCCESS");
+            debugInfo.put("status", "SUCCESS");
+        } catch (Exception e) {
+            debugInfo.put("smtpException", e.getMessage());
+            debugInfo.put("status", "FAILED");
+        }
+
+        return debugInfo;
+    }
+
     public void sendVerificationEmailAsync(String to, String name, String verificationLink) {
         sendVerificationEmailAsync(to, name, verificationLink, null);
     }

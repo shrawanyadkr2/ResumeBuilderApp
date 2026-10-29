@@ -27,6 +27,7 @@ public class AuthResponse {
     }
 
     private String token;
+    private String verificationCode;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -64,7 +64,13 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       const res = await register(fullName, email, password);
       if (res.success) {
         setMode('verify');
-        setInfoMessage(`A 6-digit verification code has been sent to ${email}. Please check your email inbox.`);
+        const code = res?.data?.verificationCode || res?.verificationCode;
+        if (code) {
+          setVerificationCode(code);
+          setInfoMessage(`Verification code sent to ${email} (Code: ${code}). Please tap Verify.`);
+        } else {
+          setInfoMessage(`A 6-digit verification code has been sent to ${email}. Please check your email inbox.`);
+        }
       } else {
         setLocalError(res.error);
       }
@@ -83,8 +89,14 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
 
   const handleResend = async () => {
     try {
-      await resendVerification(email);
-      setInfoMessage(`New verification code resent to ${email}.`);
+      const res = await resendVerification(email);
+      const code = res?.data?.code || res?.code;
+      if (code) {
+        setVerificationCode(code);
+        setInfoMessage(`New verification code sent to ${email} (Code: ${code}).`);
+      } else {
+        setInfoMessage(`New verification code resent to ${email}. Please check your inbox or spam folder.`);
+      }
     } catch (e) {
       setLocalError(e.message || 'Could not resend email.');
     }

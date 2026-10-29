@@ -3,6 +3,7 @@ package com.skydevx.resumegenie.controller;
 import com.skydevx.resumegenie.document.User;
 import com.skydevx.resumegenie.dto.*;
 import com.skydevx.resumegenie.service.AuthService;
+import com.skydevx.resumegenie.service.EmailService;
 import com.skydevx.resumegenie.service.FileUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +29,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final FileUploadService fileUploadService;
+    private final EmailService emailService;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user account")
@@ -70,16 +72,22 @@ public class AuthController {
 
     @PostMapping("/resend-verification")
     @Operation(summary = "Resend account verification email")
-    public ResponseEntity<ApiResponse<Void>> resendVerification(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> resendVerification(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         if (email == null || email.isBlank()) {
-            return ResponseEntity.badRequest().body(ApiResponse.<Void>builder()
+            return ResponseEntity.badRequest().body(ApiResponse.<Map<String, String>>builder()
                     .success(false)
                     .message("Email is required")
                     .build());
         }
-        authService.resendVerification(email);
-        return ResponseEntity.ok(ApiResponse.ok("Verification email resent. Please check your inbox."));
+        String code = authService.resendVerification(email);
+        return ResponseEntity.ok(ApiResponse.ok("Verification email resent. Please check your inbox.", Map.of("code", code != null ? code : "")));
+    }
+
+    @GetMapping("/test-email")
+    @Operation(summary = "Diagnostic test endpoint for email delivery")
+    public ResponseEntity<Map<String, Object>> testEmail(@RequestParam("to") String to) {
+        return ResponseEntity.ok(emailService.testSendEmail(to));
     }
 
     @PostMapping("/forgot-password")
