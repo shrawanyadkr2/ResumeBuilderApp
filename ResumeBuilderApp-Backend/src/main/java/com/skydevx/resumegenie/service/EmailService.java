@@ -35,22 +35,11 @@ public class EmailService {
     private String brevoApiKey;
 
     public void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException, java.io.UnsupportedEncodingException {
-        // Option 1: Resend HTTP API (Port 443 - Bypasses all Render free tier SMTP blocks)
-        if (resendApiKey != null && !resendApiKey.isBlank()) {
-            sendViaResend(to, subject, htmlContent);
-            return;
-        }
-
-        // Option 2: Brevo HTTP API (Port 443 - Bypasses all Render free tier SMTP blocks)
-        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
-            sendViaBrevo(to, subject, htmlContent);
-            return;
-        }
-
-        // Option 3: Primary SMTP Dispatch
         String effectiveSender = (fromEmail != null && fromEmail.contains("@")) ? fromEmail : "shrawan29yadav@gmail.com";
+
+        // Priority 1: Direct Gmail SMTP dispatch over SSL Port 465 from shrawan29yadav@gmail.com!
         try {
-            log.info("Sending HTML email to recipient: [{}] via primary SMTP from: [{}]", to, effectiveSender);
+            log.info("Sending HTML email to recipient [{}] directly from Gmail [{}] via SSL port 465", to, effectiveSender);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(effectiveSender, "Resume Genie");
@@ -58,44 +47,49 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
             mailSender.send(message);
-            log.info("HTML email successfully submitted to SMTP server for [{}]", to);
+            log.info("HTML email successfully submitted via Gmail SMTP for [{}]", to);
             return;
-        } catch (Exception primaryEx) {
-            log.warn("Primary SMTP dispatch failed ({}), attempting fallback ports (2525, 465)...", primaryEx.getMessage());
+        } catch (Exception gmailEx) {
+            log.warn("Gmail primary SMTP dispatch failed ({}), attempting fallback channels...", gmailEx.getMessage());
         }
 
-        // Option 4: Alternative ports (2525, 465) on Brevo SMTP to bypass Render port 587 block
-        int[] fallbackPorts = new int[]{2525, 465};
-        for (int port : fallbackPorts) {
+        // Priority 2: Standalone Gmail SSL 465 fallback socket (guarantees direct delivery from shrawan29yadav@gmail.com)
+        try {
+            log.info("Attempting standalone Gmail SSL 465 fallback dispatch to [{}]...", to);
+            org.springframework.mail.javamail.JavaMailSenderImpl gmailFallback = new org.springframework.mail.javamail.JavaMailSenderImpl();
+            gmailFallback.setHost("smtp.gmail.com");
+            gmailFallback.setPort(465);
+            gmailFallback.setUsername("shrawan29yadav@gmail.com");
+            gmailFallback.setPassword("gpeviwqzinkinram");
+
+            java.util.Properties props = gmailFallback.getJavaMailProperties();
+            props.put("mail.transport.protocol", "smtps");
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.ssl.trust", "*");
+            props.put("mail.smtp.socketFactory.port", "465");
+            props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+
+            MimeMessage message = gmailFallback.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(effectiveSender, "Resume Genie");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            gmailFallback.send(message);
+            log.info("Standalone Gmail SSL 465 fallback succeeded for [{}]", to);
+            return;
+        } catch (Exception fallbackEx) {
+            log.warn("Standalone Gmail fallback failed: {}", fallbackEx.getMessage());
+        }
+
+        // Priority 3: Resend HTTP API (Port 443)
+        if (resendApiKey != null && !resendApiKey.isBlank()) {
             try {
-                log.info("Attempting fallback SMTP dispatch on port {}...", port);
-                org.springframework.mail.javamail.JavaMailSenderImpl fallbackSender = new org.springframework.mail.javamail.JavaMailSenderImpl();
-                fallbackSender.setHost("smtp-relay.brevo.com");
-                fallbackSender.setPort(port);
-                fallbackSender.setUsername("b33bd2001@smtp-brevo.com");
-                fallbackSender.setPassword("bsk6zz6BAUuMJQO");
-
-                java.util.Properties props = fallbackSender.getJavaMailProperties();
-                props.put("mail.transport.protocol", "smtp");
-                props.put("mail.smtp.auth", "true");
-                if (port == 465) {
-                    props.put("mail.smtp.ssl.enable", "true");
-                } else {
-                    props.put("mail.smtp.starttls.enable", "true");
-                }
-                props.put("mail.smtp.ssl.trust", "*");
-
-                MimeMessage message = fallbackSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-                helper.setFrom(effectiveSender, "Resume Genie");
-                helper.setTo(to);
-                helper.setSubject(subject);
-                helper.setText(htmlContent, true);
-                fallbackSender.send(message);
-                log.info("Fallback SMTP dispatch on port {} succeeded for [{}]", port, to);
+                sendViaResend(to, subject, htmlContent);
                 return;
-            } catch (Exception fallbackEx) {
-                log.warn("Fallback SMTP on port {} failed: {}", port, fallbackEx.getMessage());
+            } catch (Exception resendEx) {
+                log.warn("Resend API fallback failed: {}", resendEx.getMessage());
             }
         }
     }
