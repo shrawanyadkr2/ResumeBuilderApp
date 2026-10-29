@@ -52,12 +52,14 @@ public class PaymentController {
     @PostMapping("/verify")
     @Operation(summary = "Verify Razorpay payment signature server-side")
     public ResponseEntity<ApiResponse<Map<String, String>>> verifyPayment(
-            @Valid @RequestBody VerifyPaymentRequest request) {
+            @Valid @RequestBody VerifyPaymentRequest request,
+            @AuthenticationPrincipal User currentUser) {
 
         boolean isValid = paymentService.verifyPayment(
                 request.getRazorpayOrderId(),
                 request.getRazorpayPaymentId(),
-                request.getRazorpaySignature()
+                request.getRazorpaySignature(),
+                currentUser
         );
 
         if (isValid) {
