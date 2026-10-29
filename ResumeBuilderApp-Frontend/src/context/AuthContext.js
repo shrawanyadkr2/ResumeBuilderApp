@@ -188,38 +188,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Verify Email with 6-digit Code / Token
+  // Verify Email (No-op pass-through)
   const verifyEmail = async (email, code) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await authApi.verifyEmail({ email, code });
-      const authData = res?.data || res;
-      if (authData?.token) {
-        await apiClient.setToken(authData.token);
-        setToken(authData.token);
-      }
-      const userProfile = formatUserProfile(authData, user?.name || '', email);
-      userProfile.isEmailVerified = true;
-      setUser(userProfile);
-      setPendingVerificationEmail(null);
-      return { success: true, data: userProfile };
-    } catch (err) {
-      const msg = err.message || 'Email verification failed';
-      setError(msg);
-      return { success: false, error: msg };
-    } finally {
-      setIsLoading(false);
-    }
+    return { success: true };
   };
 
-  // Resend verification email
+  // Resend verification email (No-op pass-through)
   const resendVerification = async (email) => {
-    try {
-      return await authApi.resendVerification(email);
-    } catch (err) {
-      throw err;
-    }
+    return { success: true };
   };
 
   // Upload Profile Avatar Photo

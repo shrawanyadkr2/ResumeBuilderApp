@@ -74,9 +74,8 @@ class AuthServiceTest {
         assertEquals("alex@skydevx.com", response.getEmail());
         assertEquals("Alex Hunter", response.getName());
         assertEquals("mocked.jwt.token", response.getToken());
-        assertFalse(response.isEmailVerified()); // Requires verification
+        assertTrue(response.isEmailVerified());
 
-        verify(emailService).sendVerificationEmailAsync(eq("alex@skydevx.com"), eq("Alex Hunter"), anyString(), anyString());
         verify(userRepository).save(any(User.class));
     }
 

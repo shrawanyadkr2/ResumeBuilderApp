@@ -14,40 +14,21 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
   const {
     login,
     register,
-    verifyEmail,
-    resendVerification,
     loginAsDemo,
     isLoading,
     error,
-    pendingVerificationEmail,
-    setPendingVerificationEmail,
   } = useAuth();
 
-  // Mode: 'login' | 'register' | 'verify'
+  // Mode: 'login' | 'register'
   const [mode, setMode] = useState('login');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [localError, setLocalError] = useState(null);
-  const [infoMessage, setInfoMessage] = useState(null);
 
   // Handle Login or Register submit
   const handleSubmit = async () => {
     setLocalError(null);
-    setInfoMessage(null);
-
-    if (mode === 'verify') {
-      try {
-        if (verificationCode.trim()) {
-          await verifyEmail(email, verificationCode.trim());
-        }
-      } catch (e) {
-        console.warn('Bypass verify:', e);
-      }
-      if (onSuccess) onSuccess();
-      return;
-    }
 
     if (!email.trim() || !password.trim()) {
       setLocalError('Please fill in all required fields.');
@@ -61,18 +42,7 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       }
       const res = await register(fullName, email, password);
       if (res.success) {
-        if (!res.requireVerification) {
-          if (onSuccess) onSuccess();
-          return;
-        }
-        setMode('verify');
-        const code = res?.data?.verificationCode || res?.verificationCode;
-        if (code) {
-          setVerificationCode(code);
-          setInfoMessage(`Verification code sent to ${email} (Code: ${code}). Please tap Verify.`);
-        } else {
-          setInfoMessage(`A 6-digit verification code has been sent to ${email}. Please check your email inbox.`);
-        }
+        if (onSuccess) onSuccess();
       } else {
         setLocalError(res.error);
       }
@@ -83,21 +53,6 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       } else {
         setLocalError(res.error);
       }
-    }
-  };
-
-  const handleResend = async () => {
-    try {
-      const res = await resendVerification(email);
-      const code = res?.data?.code || res?.code;
-      if (code) {
-        setVerificationCode(code);
-        setInfoMessage(`New verification code sent to ${email} (Code: ${code}).`);
-      } else {
-        setInfoMessage(`New verification code resent to ${email}. Please check your inbox or spam folder.`);
-      }
-    } catch (e) {
-      setLocalError(e.message || 'Could not resend email.');
     }
   };
 
@@ -113,45 +68,58 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
     >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="always"
-        keyboardDismissMode="none"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Top Back Navigation */}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Top Header / Back Button */}
+      <View style={styles.topBar}>
         {onBackToSplash && (
           <TouchableOpacity
-            style={styles.backButton}
+            style={styles.backBtn}
             onPress={onBackToSplash}
             activeOpacity={0.7}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <ArrowLeftIcon size={18} color="#94A3B8" />
-            <Text style={styles.backButtonText}>Back</Text>
+            <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
         )}
+      </View>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <SkyDevXLogo size={38} showTagline={false} />
-        <Text style={styles.title}>
-          {mode === 'login'
-            ? 'Sign In to Workspace'
-            : mode === 'register'
-            ? 'Create Your Account'
-            : 'Verify Your Email'}
-        </Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logoRow}>
+          <SkyDevXLogo size={36} />
+        </View>
+
+        <Text style={styles.title}>Resume Genie</Text>
         <Text style={styles.subtitle}>
           {mode === 'login'
-            ? 'Access your ATS-optimized resumes and cloud exports.'
-            : mode === 'register'
-            ? 'Build recruiter-approved resumes with full export support.'
-            : `Enter the code sent to ${email} to activate your account.`}
+            ? 'Sign in to access your resumes & AI tools'
+            : 'Create your account to start building resumes'}
         </Text>
       </View>
 
-      {/* Tabs (Sign In / Register / Verify) */}
+      {/* Features Banner */}
+      <View style={styles.featuresBanner}>
+        <View style={styles.featureItem}>
+          <CheckIcon size={14} color="#10B981" />
+          <Text style={styles.featureText}>ATS-Compliant Resumes</Text>
+        </View>
+        <View style={styles.featureItem}>
+          <CheckIcon size={14} color="#10B981" />
+          <Text style={styles.featureText}>Instant PDF Vector Export</Text>
+        </View>
+        <View style={styles.featureItem}>
+          <CheckIcon size={14} color="#10B981" />
+          <Text style={styles.featureText}>Cloud Storage & Sync</Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, mode === 'login' && styles.activeTab]}
@@ -178,25 +146,7 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
             Register
           </Text>
         </TouchableOpacity>
-
-        {mode === 'verify' && (
-          <TouchableOpacity
-            style={[styles.tab, styles.activeTab]}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, styles.activeTabText]}>
-              Verify
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
-
-      {/* Messages */}
-      {infoMessage && (
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>{infoMessage}</Text>
-        </View>
-      )}
 
       {(localError || error) && (
         <View style={styles.errorBox}>
@@ -216,63 +166,25 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
           />
         )}
 
-        {mode !== 'verify' && (
-          <>
-            <InputField
-              label="Email Address *"
-              placeholder="e.g. shrawan.yadav@skydevx.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+        <InputField
+          label="Email Address *"
+          placeholder="e.g. shrawan.yadav@skydevx.com"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-            <InputField
-              label="Password *"
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </>
-        )}
-
-        {mode === 'verify' && (
-          <>
-            <InputField
-              label="6-Digit Verification Code *"
-              placeholder="123456"
-              value={verificationCode}
-              onChangeText={setVerificationCode}
-              keyboardType="number-pad"
-              autoCapitalize="none"
-            />
-
-            <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
-              <Text style={styles.resendText}>Didn't receive code? Resend Email</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={() => {
-                if (onSuccess) onSuccess();
-              }} 
-              style={{ paddingVertical: 10, alignItems: 'center' }}
-            >
-              <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 13 }}>
-                ⚡ Skip Verification & Enter App Directly →
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <InputField
+          label="Password *"
+          placeholder="••••••••"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
         <Button
-          title={
-            mode === 'login'
-              ? 'Sign In to Workspace'
-              : mode === 'register'
-              ? 'Create Account & Send Verification'
-              : 'Verify Code & Launch'
-          }
+          title={mode === 'login' ? 'Sign In to Workspace' : 'Create Account & Launch'}
           onPress={handleSubmit}
           loading={isLoading}
           size="large"
@@ -312,56 +224,82 @@ const styles = StyleSheet.create({
     backgroundColor: '#090D16',
   },
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: '#090D16',
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 40,
-    justifyContent: 'flex-start',
-    maxWidth: 480,
-    width: '100%',
-    alignSelf: 'center',
   },
-  backButton: {
+  contentContainer: {
+    padding: 24,
+    paddingTop: 48,
+    paddingBottom: 40,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  backButtonText: {
+  backBtnText: {
     color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  logoRow: {
+    marginBottom: 12,
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: 14,
-    marginBottom: 4,
+    color: '#F8FAFC',
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
+  },
+  featuresBanner: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    padding: 14,
+    marginBottom: 20,
+    gap: 8,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  featureText: {
+    fontSize: 13,
+    color: '#CBD5E1',
+    fontWeight: '500',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#111827',
-    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#1E293B',
     padding: 4,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#1F2937',
   },
   tab: {
     flex: 1,
@@ -370,98 +308,72 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#4F46E5',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#0066FF',
   },
   tabText: {
-    fontSize: 13,
-    color: '#94A3B8',
+    fontSize: 14,
     fontWeight: '600',
+    color: '#64748B',
   },
   activeTabText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  infoBox: {
-    backgroundColor: '#064E3B',
-    borderWidth: 1,
-    borderColor: '#10B981',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#A7F3D0',
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '700',
   },
   errorBox: {
-    backgroundColor: '#451A1A',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#EF4444',
-    borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorBannerText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#FCA5A5',
-    fontWeight: '600',
     textAlign: 'center',
   },
   form: {
-    width: '100%',
-  },
-  resendBtn: {
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  resendText: {
-    fontSize: 12,
-    color: '#60A5FA',
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    padding: 20,
+    gap: 16,
   },
   submitBtn: {
-    marginTop: 6,
+    marginTop: 4,
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 4,
+    gap: 10,
   },
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#1E293B',
   },
   dividerText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#64748B',
-    marginHorizontal: 10,
     letterSpacing: 0.8,
   },
   demoNoteText: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 12,
+    color: '#64748B',
     textAlign: 'center',
-    marginTop: 8,
     lineHeight: 16,
+    marginTop: -8,
   },
   footer: {
-    alignItems: 'center',
     marginTop: 28,
+    alignItems: 'center',
   },
   footerText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
+    fontSize: 12,
+    color: '#475569',
   },
 });
 

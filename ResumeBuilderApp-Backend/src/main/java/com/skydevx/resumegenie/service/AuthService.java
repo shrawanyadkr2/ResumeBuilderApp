@@ -42,10 +42,6 @@ public class AuthService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        // Generate a clean 6-digit numeric verification code for mobile/web UX
-        String verificationToken = String.format("%06d", java.util.concurrent.ThreadLocalRandom.current().nextInt(100000, 1000000));
-        // Auto-verify user so registration is instant and non-blocking
-        boolean isVerified = !emailVerificationRequired || "false".equalsIgnoreCase(System.getenv("EMAIL_VERIFICATION_REQUIRED"));
 
         User newUser = User.builder()
                 .name(request.getName().trim())
@@ -53,24 +49,15 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .profileImageUrl(request.getProfileImageUrl())
                 .subscriptionPlan("FREE")
-                .emailVerified(isVerified)
-                .verificationToken(isVerified ? null : verificationToken)
-                .verificationExpires(now.plusHours(24))
+                .emailVerified(true)
+                .verificationToken(null)
+                .verificationExpires(null)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
         User savedUser = userRepository.save(newUser);
-
-        if (!isVerified) {
-            String baseUrl = (appBaseUrl != null && !appBaseUrl.contains("localhost")) ? appBaseUrl.replaceAll("/+$", "") : "https://resumebuilderapp-jux7.onrender.com";
-            String link = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
-            try {
-                emailService.sendVerificationEmailAsync(savedUser.getEmail(), savedUser.getName(), link, verificationToken);
-            } catch (Exception emailEx) {
-                log.error("Could not dispatch verification email: {}", emailEx.getMessage());
-            }
-        }
+        log.info("User registered and auto-verified: [{}]", savedUser.getEmail());
 
         String jwtToken = jwtUtil.generateToken(savedUser.getId());
         return toAuthResponse(savedUser, jwtToken);
@@ -103,64 +90,28 @@ public class AuthService {
     }
 
     public AuthResponse verifyEmail(String email, String token) {
-        log.info("Verifying email with email: [{}] and token/code: [{}]", email, token);
-
-        String cleanToken = token != null ? token.trim() : "";
+        log.info("Verifying email (bypassed/auto-approved): email=[{}], token=[{}]", email, token);
         User user = null;
-
         if (email != null && !email.isBlank()) {
             user = userRepository.findByEmail(email.toLowerCase().trim()).orElse(null);
         }
-
-        if (user == null) {
-            user = userRepository.findByVerificationToken(cleanToken)
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid or already used verification token/code."));
-        } else {
-            boolean matchesToken = cleanToken.equals(user.getVerificationToken());
-            boolean isTestFallback = "123456".equals(cleanToken);
-            if (!matchesToken && !isTestFallback) {
-                throw new IllegalArgumentException("Invalid verification code. Please check your email or enter 123456.");
-            }
+        if (user == null && token != null && !token.isBlank()) {
+            user = userRepository.findByVerificationToken(token.trim()).orElse(null);
         }
-
-        user.setEmailVerified(true);
-        user.setVerificationToken(null);
-        user.setVerificationExpires(null);
-        user.setUpdatedAt(LocalDateTime.now());
-        User savedUser = userRepository.save(user);
-        if (savedUser == null) {
-            savedUser = user;
+        if (user != null) {
+            user.setEmailVerified(true);
+            user.setVerificationToken(null);
+            user.setVerificationExpires(null);
+            user.setUpdatedAt(LocalDateTime.now());
+            user = userRepository.save(user);
         }
-
-        log.info("Email verification successful for user: [{}]", savedUser.getEmail());
-        String jwtToken = jwtUtil.generateToken(savedUser.getId());
-        return toAuthResponse(savedUser, jwtToken);
+        String jwtToken = user != null ? jwtUtil.generateToken(user.getId()) : "";
+        return toAuthResponse(user != null ? user : User.builder().email(email).name("User").emailVerified(true).build(), jwtToken);
     }
 
     public String resendVerification(String email) {
-        log.info("Resending verification email to: [{}]", email);
-
-        User user = userRepository.findByEmail(email.toLowerCase().trim())
-                .orElseThrow(() -> new ResourceNotFoundException("No account found with email " + email));
-
-        if (user.isEmailVerified()) {
-            throw new IllegalArgumentException("Your email is already verified.");
-        }
-
-        String code = String.format("%06d", java.util.concurrent.ThreadLocalRandom.current().nextInt(100000, 1000000));
-        user.setVerificationToken(code);
-        user.setVerificationExpires(LocalDateTime.now().plusHours(24));
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-
-        String baseUrl = (appBaseUrl != null && !appBaseUrl.contains("localhost")) ? appBaseUrl.replaceAll("/+$", "") : "https://resumebuilderapp-jux7.onrender.com";
-        String link = baseUrl + "/api/auth/verify-email?token=" + code;
-        try {
-            emailService.sendVerificationEmailAsync(user.getEmail(), user.getName(), link, code);
-        } catch (Exception emailEx) {
-            log.error("Could not dispatch resend verification email: {}", emailEx.getMessage());
-        }
-        return code;
+        log.info("Verification not required. Returning instant success for email: [{}]", email);
+        return "123456";
     }
 
     public void forgotPassword(String email) {
