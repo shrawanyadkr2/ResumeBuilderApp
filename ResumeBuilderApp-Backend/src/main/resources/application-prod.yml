@@ -6,13 +6,13 @@ spring:
       on-profile: prod
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb+srv://shrawanyadkr2:Shrawan2026@cluster0.uyjza.mongodb.net/resumegenie?retryWrites=true&w=majority}
+      uri: ${MONGODB_URI}
       database: ${MONGODB_DATABASE:resumegenie}
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:465}
-    username: ${SPRING_MAIL_USERNAME:shrawan29yadav@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:gpeviwqzinkinram}
+    username: ${SPRING_MAIL_USERNAME:noreply@skydevx.com}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -23,7 +23,7 @@ spring:
           socketFactory:
             port: 465
             class: javax.net.ssl.SSLSocketFactory
-          from: ${SPRING_MAIL_FROM:shrawan29yadav@gmail.com}
+          from: ${SPRING_MAIL_FROM:noreply@skydevx.com}
     protocol: smtps
 
 server:
@@ -56,9 +56,9 @@ app:
 
 # Cloudinary Storage Configuration
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:zbgbxmxi}
-  api-key: ${CLOUDINARY_API_KEY:644989297226411}
-  api-secret: ${CLOUDINARY_API_SECRET:ISW9Ad8JLAzTcwEqCPmxPmUBe2s}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
 
 # Resend API Configuration
 resend:

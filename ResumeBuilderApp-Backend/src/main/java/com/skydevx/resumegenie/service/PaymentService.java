@@ -54,7 +54,7 @@ public class PaymentService {
 
         String activeKeyId = getRazorpayKeyId();
         String activeSecret = (razorpayKeySecret != null && !razorpayKeySecret.isBlank())
-                ? razorpayKeySecret : "zG91YL3lbzo3T9c3ypbeMLyk";
+                ? razorpayKeySecret : "";
 
         String receipt = "RG_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         int amount = plusPlanAmount;
@@ -107,7 +107,7 @@ public class PaymentService {
 
         try {
             String activeSecret = (razorpayKeySecret != null && !razorpayKeySecret.isBlank())
-                    ? razorpayKeySecret : "zG91YL3lbzo3T9c3ypbeMLyk";
+                    ? razorpayKeySecret : "";
 
             boolean isValid = false;
 

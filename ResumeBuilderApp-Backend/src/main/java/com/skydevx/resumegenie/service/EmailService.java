@@ -28,6 +28,9 @@ public class EmailService {
     @Value("${spring.mail.username:${spring.mail.properties.mail.smtp.from:noreply@skydevx.com}}")
     private String fromEmail;
 
+    @Value("${spring.mail.password:${SPRING_MAIL_PASSWORD:}}")
+    private String mailPassword;
+
     @Value("${resend.api-key:${RESEND_API_KEY:}}")
     private String resendApiKey;
 
@@ -35,11 +38,11 @@ public class EmailService {
     private String brevoApiKey;
 
     public void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException, java.io.UnsupportedEncodingException {
-        String effectiveSender = (fromEmail != null && fromEmail.contains("@")) ? fromEmail : "shrawan29yadav@gmail.com";
+        String effectiveSender = (fromEmail != null && fromEmail.contains("@")) ? fromEmail : "noreply@skydevx.com";
 
-        // Priority 1: Direct Gmail SMTP dispatch over SSL Port 465 from shrawan29yadav@gmail.com!
+        // Priority 1: Direct Gmail SMTP dispatch over SSL Port 465
         try {
-            log.info("Sending HTML email to recipient [{}] directly from Gmail [{}] via SSL port 465", to, effectiveSender);
+            log.info("Sending HTML email to recipient [{}] directly via SSL port 465", to);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(effectiveSender, "Resume Genie");
@@ -53,14 +56,14 @@ public class EmailService {
             log.warn("Gmail primary SMTP dispatch failed ({}), attempting fallback channels...", gmailEx.getMessage());
         }
 
-        // Priority 2: Standalone Gmail SSL 465 fallback socket (guarantees direct delivery from shrawan29yadav@gmail.com)
+        // Priority 2: Standalone Gmail SSL 465 fallback socket
         try {
             log.info("Attempting standalone Gmail SSL 465 fallback dispatch to [{}]...", to);
             org.springframework.mail.javamail.JavaMailSenderImpl gmailFallback = new org.springframework.mail.javamail.JavaMailSenderImpl();
             gmailFallback.setHost("smtp.gmail.com");
             gmailFallback.setPort(465);
-            gmailFallback.setUsername("shrawan29yadav@gmail.com");
-            gmailFallback.setPassword("gpeviwqzinkinram");
+            gmailFallback.setUsername(effectiveSender);
+            gmailFallback.setPassword(mailPassword != null ? mailPassword.trim() : "");
 
             java.util.Properties props = gmailFallback.getJavaMailProperties();
             props.put("mail.transport.protocol", "smtps");
