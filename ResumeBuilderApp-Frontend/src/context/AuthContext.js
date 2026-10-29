@@ -258,7 +258,11 @@ export const AuthProvider = ({ children }) => {
       if (imageUrl) {
         // Persist profileImageUrl directly to MongoDB Atlas
         try {
-          await authApi.updateProfile({ profileImageUrl: imageUrl });
+          const updateRes = await authApi.updateProfile({ profileImageUrl: imageUrl });
+          const savedData = updateRes?.data || updateRes;
+          if (savedData?.profileImageUrl) {
+            imageUrl = savedData.profileImageUrl;
+          }
         } catch (dbErr) {
           console.warn('[uploadAvatar] updateProfile to database error:', dbErr?.message);
         }

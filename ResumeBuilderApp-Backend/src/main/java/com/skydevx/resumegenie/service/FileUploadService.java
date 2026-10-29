@@ -114,6 +114,28 @@ public class FileUploadService {
         return result;
     }
 
+    public String uploadDataUriToCloudinary(String dataUri, String folder) {
+        if (dataUri == null || !dataUri.startsWith("data:")) {
+            return dataUri;
+        }
+        if (cloudinary != null && cloudinary.config.cloudName != null && !cloudinary.config.cloudName.isBlank()) {
+            try {
+                Map<String, Object> uploadParams = ObjectUtils.asMap(
+                        "folder", "resumegenie/" + (folder != null ? folder : "users"),
+                        "resource_type", "image",
+                        "overwrite", true
+                );
+                Map<?, ?> uploadResult = cloudinary.uploader().upload(dataUri, uploadParams);
+                String secureUrl = (String) uploadResult.get("secure_url");
+                log.info("Cloudinary upload from Data URI successful. Resource URL: {}", secureUrl);
+                return secureUrl;
+            } catch (Exception e) {
+                log.warn("Cloudinary upload from Data URI failed ({}), keeping fallback URI.", e.getMessage());
+            }
+        }
+        return dataUri;
+    }
+
     public Map<String, String> uploadUserProfileImage(User user, MultipartFile file) throws IOException {
         Map<String, String> uploadResult = uploadSingleImage(file, "users");
         String imageUrl = uploadResult.get("imageUrl");

@@ -71,9 +71,9 @@ jwt:
 
 # Cloudinary Storage Configuration
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:zbgbxmxi}
+  api-key: ${CLOUDINARY_API_KEY:644989297226411}
+  api-secret: ${CLOUDINARY_API_SECRET:ISW9Ad8JLAzTcwEqCPmxPmUBe2s}
 
 # Razorpay Payment Gateway Configuration
 razorpay:

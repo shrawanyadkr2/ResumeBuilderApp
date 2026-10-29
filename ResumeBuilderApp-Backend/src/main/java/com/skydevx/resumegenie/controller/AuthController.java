@@ -113,6 +113,9 @@ public class AuthController {
         if (imageUrl == null) {
             imageUrl = (String) updates.get("imageUrl");
         }
+        if (imageUrl != null && imageUrl.startsWith("data:")) {
+            imageUrl = fileUploadService.uploadDataUriToCloudinary(imageUrl, "users");
+        }
         AuthResponse response = authService.updateProfile(user, name, imageUrl);
         return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.", response));
     }
