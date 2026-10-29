@@ -190,6 +190,22 @@ public class AuthService {
         freshUser.setProfileImageUrl(imageUrl);
         freshUser.setUpdatedAt(LocalDateTime.now());
         User savedUser = userRepository.save(freshUser);
+        log.info("Saved profile image in MongoDB for user [{}]: length={}", freshUser.getEmail(), (imageUrl != null ? imageUrl.length() : 0));
+        return toAuthResponse(savedUser, null);
+    }
+
+    public AuthResponse updateProfile(User currentUser, String name, String imageUrl) {
+        User freshUser = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (name != null && !name.isBlank()) {
+            freshUser.setName(name.trim());
+        }
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            freshUser.setProfileImageUrl(imageUrl);
+        }
+        freshUser.setUpdatedAt(LocalDateTime.now());
+        User savedUser = userRepository.save(freshUser);
+        log.info("Updated profile in MongoDB for user [{}]: name={}, hasImage={}", freshUser.getEmail(), name, (imageUrl != null));
         return toAuthResponse(savedUser, null);
     }
 

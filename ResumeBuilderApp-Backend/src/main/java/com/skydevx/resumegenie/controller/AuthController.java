@@ -103,6 +103,20 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @PutMapping({"/profile", "/me"})
+    @Operation(summary = "Update authenticated user profile (name, profileImageUrl)")
+    public ResponseEntity<ApiResponse<AuthResponse>> updateProfile(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, Object> updates) {
+        String name = (String) updates.get("name");
+        String imageUrl = (String) updates.get("profileImageUrl");
+        if (imageUrl == null) {
+            imageUrl = (String) updates.get("imageUrl");
+        }
+        AuthResponse response = authService.updateProfile(user, name, imageUrl);
+        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.", response));
+    }
+
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload user profile avatar photo (JPEG, PNG, WebP <= 5MB)")
     public ResponseEntity<Map<String, String>> uploadProfileImage(

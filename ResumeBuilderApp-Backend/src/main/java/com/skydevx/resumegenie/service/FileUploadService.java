@@ -43,7 +43,18 @@ public class FileUploadService {
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+        String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        boolean isImageMime = contentType != null && (
+                contentType.toLowerCase().startsWith("image/") ||
+                contentType.equalsIgnoreCase("application/octet-stream")
+        );
+        boolean isImageExtension = originalName.endsWith(".jpg") ||
+                originalName.endsWith(".jpeg") ||
+                originalName.endsWith(".png") ||
+                originalName.endsWith(".webp") ||
+                originalName.endsWith(".heic");
+
+        if (!isImageMime && !isImageExtension) {
             throw new IllegalArgumentException("Unsupported image format [" + contentType + "]. Only JPEG, PNG, and WebP are allowed.");
         }
     }

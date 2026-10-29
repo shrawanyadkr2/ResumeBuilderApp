@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import authApi from '../api/authApi';
 import apiClient from '../api/apiClient';
 import paymentApi from '../api/paymentApi';
+import storage from '../utils/storage';
 import SHRAWAN_PROFILE_IMAGE_URI from '../constants/shrawanProfileImage';
 
 const AuthContext = createContext(null);
@@ -87,7 +88,17 @@ export const AuthProvider = ({ children }) => {
             const profile = await authApi.getProfile();
             const pData = profile?.data || profile;
             if (pData?.id || pData?.email) {
-              setUser(formatUserProfile(pData));
+              const formatted = formatUserProfile(pData);
+              const userKey = formatted.id || formatted.email;
+              if (!formatted.profileImageUrl && userKey) {
+                const cached = await storage.getItem(`user_avatar_${userKey}`);
+                if (cached) {
+                  formatted.profileImageUrl = cached;
+                }
+              } else if (formatted.profileImageUrl && userKey) {
+                await storage.setItem(`user_avatar_${userKey}`, formatted.profileImageUrl);
+              }
+              setUser(formatted);
             }
           } catch (profileErr) {
             console.warn('[AuthContext] Session expired or invalid:', profileErr.message);
@@ -116,6 +127,16 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setPendingVerificationEmail(email);
         return { success: false, requireVerification: true, error: 'Please enter your 6-digit verification code.' };
+      }
+
+      const userKey = userProfile.id || userProfile.email;
+      if (!userProfile.profileImageUrl && userKey) {
+        const cached = await storage.getItem(`user_avatar_${userKey}`);
+        if (cached) {
+          userProfile.profileImageUrl = cached;
+        }
+      } else if (userProfile.profileImageUrl && userKey) {
+        await storage.setItem(`user_avatar_${userKey}`, userProfile.profileImageUrl);
       }
 
       if (authData?.token) {
@@ -201,10 +222,17 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       let formData = new FormData();
+      let rawBase64 = null;
+      let rawUri = null;
+
       if (formDataOrFile instanceof FormData) {
         formData = formDataOrFile;
       } else if (formDataOrFile && formDataOrFile.uri) {
         // Native React Native mobile format
+        rawUri = formDataOrFile.uri;
+        if (formDataOrFile.base64) {
+          rawBase64 = `data:${formDataOrFile.type || 'image/jpeg'};base64,${formDataOrFile.base64}`;
+        }
         formData.append('file', {
           uri: formDataOrFile.uri,
           name: formDataOrFile.name || 'avatar.jpg',
@@ -220,14 +248,27 @@ export const AuthProvider = ({ children }) => {
         imageUrl = res?.imageUrl || (res?.data && res?.data?.imageUrl);
       } catch (uploadErr) {
         console.warn('[uploadAvatar] Cloud upload warning, using direct local/base64 fallback:', uploadErr);
-        if (formDataOrFile?.base64) {
-          imageUrl = `data:${formDataOrFile.type || 'image/jpeg'};base64,${formDataOrFile.base64}`;
-        } else if (formDataOrFile?.uri) {
-          imageUrl = formDataOrFile.uri;
+        if (rawBase64) {
+          imageUrl = rawBase64;
+        } else if (rawUri) {
+          imageUrl = rawUri;
         }
       }
 
       if (imageUrl) {
+        // Persist profileImageUrl directly to MongoDB Atlas
+        try {
+          await authApi.updateProfile({ profileImageUrl: imageUrl });
+        } catch (dbErr) {
+          console.warn('[uploadAvatar] updateProfile to database error:', dbErr?.message);
+        }
+
+        // Cache locally for instant loading across re-launches/logins
+        const userKey = user?.id || user?.email;
+        if (userKey) {
+          await storage.setItem(`user_avatar_${userKey}`, imageUrl);
+        }
+
         setUser((prev) => {
           if (!prev) return prev;
           return {
