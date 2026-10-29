@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Resume Genie",
-    "slug": "resume-genie",
+    "slug": "resumebuilderapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -32,7 +32,10 @@
     },
     "extra": {
       "organization": "sky.devX",
-      "appName": "Resume Genie"
+      "appName": "Resume Genie",
+      "eas": {
+        "projectId": "effda112-575d-46ba-ac64-a1be94f4fb0d"
+      }
     }
   }
 }

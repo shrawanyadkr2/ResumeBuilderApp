@@ -72,8 +72,11 @@ class ApiClient {
       return data;
     } catch (err) {
       clearTimeout(timeout);
-      if (err.name === 'AbortError') {
-        const timeoutError = new Error('Network request timed out. Please check your connection.');
+      const isAbort = err.name === 'AbortError' ||
+                      err.message?.toLowerCase().includes('cancel') ||
+                      err.message?.toLowerCase().includes('abort');
+      if (isAbort) {
+        const timeoutError = new Error('Server was waking up from sleep. Please tap once more to continue.');
         timeoutError.status = 408;
         throw timeoutError;
       }

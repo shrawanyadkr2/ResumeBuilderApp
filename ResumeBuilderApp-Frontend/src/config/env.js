@@ -29,7 +29,7 @@ export const ENV = {
   appName: 'Resume Genie',
   appVersion: '1.0.0',
   creator: 'sky.devX',
-  defaultTimeoutMs: 25000,
+  defaultTimeoutMs: 60000,
   razorpayKeyId: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TIY8F95ZYQV2PN',
 };
 
