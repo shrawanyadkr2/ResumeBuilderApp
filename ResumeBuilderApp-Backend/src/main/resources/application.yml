@@ -75,6 +75,10 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:644989297226411}
   api-secret: ${CLOUDINARY_API_SECRET:ISW9Ad8JLAzTcwEqCPmxPmUBe2s}
 
+# Resend API Configuration
+resend:
+  api-key: ${RESEND_API_KEY:}
+
 # Razorpay Payment Gateway Configuration
 razorpay:
   key:
