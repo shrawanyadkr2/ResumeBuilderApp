@@ -56,7 +56,7 @@ export const formatUserProfile = (raw, fallbackName = '', fallbackEmail = '') =>
   const email = data.email || fallbackEmail || '';
   const tier = (data.subscriptionPlan || data.subscriptionTier || 'FREE').toUpperCase();
   const profileImageUrl = data.profileImageUrl || data.imageUrl || null;
-  const isEmailVerified = data.emailVerified !== false && data.isEmailVerified !== false;
+  const isEmailVerified = true;
 
   return {
     id: data.id || data._id || null,
@@ -66,7 +66,7 @@ export const formatUserProfile = (raw, fallbackName = '', fallbackEmail = '') =>
     profileImageUrl: profileImageUrl,
     subscriptionTier: tier,
     subscriptionPlan: tier,
-    isEmailVerified: isEmailVerified,
+    isEmailVerified: true,
     role: data.role || 'USER',
     isDemoMode: !!data.isDemoMode,
   };
@@ -128,12 +128,7 @@ export const AuthProvider = ({ children }) => {
       const res = await authApi.login({ email, password });
       const authData = res?.data || res;
       const userProfile = formatUserProfile(authData, '', email);
-
-      if (!userProfile.isEmailVerified) {
-        setUser(null);
-        setPendingVerificationEmail(email);
-        return { success: false, requireVerification: true, error: 'Please enter your 6-digit verification code.' };
-      }
+      userProfile.isEmailVerified = true;
 
       const userKey = userProfile.id || userProfile.email;
       if (!userProfile.profileImageUrl && userKey) {

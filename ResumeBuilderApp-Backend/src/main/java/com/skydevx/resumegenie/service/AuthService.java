@@ -86,6 +86,14 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password.");
         }
 
+        // Auto-verify any previously unverified user on login
+        if (!existingUser.isEmailVerified()) {
+            existingUser.setEmailVerified(true);
+            existingUser.setVerificationToken(null);
+            existingUser.setUpdatedAt(LocalDateTime.now());
+            existingUser = userRepository.save(existingUser);
+        }
+
         String token = jwtUtil.generateToken(existingUser.getId());
         return toAuthResponse(existingUser, token);
     }
@@ -228,9 +236,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .profileImageUrl(user.getProfileImageUrl())
                 .subscriptionPlan(user.getSubscriptionPlan())
-                .emailVerified(user.isEmailVerified())
+                .emailVerified(true)
                 .token(token)
-                .verificationCode(!user.isEmailVerified() ? user.getVerificationToken() : null)
+                .verificationCode(null)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
