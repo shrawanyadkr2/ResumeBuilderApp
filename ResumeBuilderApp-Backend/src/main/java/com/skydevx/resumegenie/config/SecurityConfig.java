@@ -61,7 +61,8 @@ public class SecurityConfig {
                                 "/api/auth/resend-verification",
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
-                                "/api/auth/test-email"
+                                "/api/auth/test-email",
+                                "/error"
                         ).permitAll()
                         // Public webhook routes (signature validated inside controller)
                         .requestMatchers(
