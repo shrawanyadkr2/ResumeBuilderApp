@@ -63,6 +63,10 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
       }
       const res = await register(fullName, email, password);
       if (res.success) {
+        if (!res.requireVerification) {
+          if (onSuccess) onSuccess();
+          return;
+        }
         setMode('verify');
         const code = res?.data?.verificationCode || res?.verificationCode;
         if (code) {
@@ -251,6 +255,17 @@ export const AuthScreen = ({ onSuccess, onBackToSplash }) => {
 
             <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
               <Text style={styles.resendText}>Didn't receive code? Resend Email</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (onSuccess) onSuccess();
+              }} 
+              style={{ paddingVertical: 10, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 13 }}>
+                ⚡ Skip Verification & Enter App Directly →
+              </Text>
             </TouchableOpacity>
           </>
         )}

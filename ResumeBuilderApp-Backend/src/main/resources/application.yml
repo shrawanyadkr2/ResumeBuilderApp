@@ -52,7 +52,7 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006,http://localhost:3000,http://localhost:5173}
   verification:
-    required: ${EMAIL_VERIFICATION_REQUIRED:true}
+    required: ${EMAIL_VERIFICATION_REQUIRED:false}
   entitlements:
     free:
       max-resumes: 3

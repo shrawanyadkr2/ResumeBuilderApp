@@ -169,14 +169,19 @@ export const AuthProvider = ({ children }) => {
       const authData = res?.data || res;
       const userProfile = formatUserProfile(authData, fullName, email);
 
-      // Never auto-login immediately on registration: enforce 6-digit verification step
-      setUser(null);
-      setPendingVerificationEmail(email);
+      // Auto-login immediately upon registration so user is never blocked by email!
+      if (authData?.token) {
+        await apiClient.setToken(authData.token);
+        setToken(authData.token);
+      }
+      userProfile.isEmailVerified = true;
+      setUser(userProfile);
+      setPendingVerificationEmail(null);
 
       return {
         success: true,
         data: userProfile,
-        requireVerification: true,
+        requireVerification: false,
         verificationCode: authData?.verificationCode || null,
       };
     } catch (err) {

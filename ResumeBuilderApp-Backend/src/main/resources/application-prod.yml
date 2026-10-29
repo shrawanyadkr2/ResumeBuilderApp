@@ -50,7 +50,7 @@ app:
   backend:
     url: ${BACKEND_BASE_URL:https://resumebuilderapp-jux7.onrender.com}
   verification:
-    required: ${EMAIL_VERIFICATION_REQUIRED:true} # Production enforces email verification by default
+    required: ${EMAIL_VERIFICATION_REQUIRED:false} # Email verification disabled by default - instant access
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
 

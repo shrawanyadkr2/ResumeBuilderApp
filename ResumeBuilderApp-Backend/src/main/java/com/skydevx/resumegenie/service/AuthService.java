@@ -31,7 +31,7 @@ public class AuthService {
     @Value("${app.client.url:http://localhost:8081}")
     private String appBaseUrl;
 
-    @Value("${app.verification.required:true}")
+    @Value("${app.verification.required:false}")
     private boolean emailVerificationRequired;
 
     public AuthResponse register(RegisterRequest request) {
@@ -44,7 +44,8 @@ public class AuthService {
         LocalDateTime now = LocalDateTime.now();
         // Generate a clean 6-digit numeric verification code for mobile/web UX
         String verificationToken = String.format("%06d", java.util.concurrent.ThreadLocalRandom.current().nextInt(100000, 1000000));
-        boolean isVerified = false;
+        // Auto-verify user so registration is instant and non-blocking
+        boolean isVerified = !emailVerificationRequired || "false".equalsIgnoreCase(System.getenv("EMAIL_VERIFICATION_REQUIRED"));
 
         User newUser = User.builder()
                 .name(request.getName().trim())
@@ -53,7 +54,7 @@ public class AuthService {
                 .profileImageUrl(request.getProfileImageUrl())
                 .subscriptionPlan("FREE")
                 .emailVerified(isVerified)
-                .verificationToken(verificationToken)
+                .verificationToken(isVerified ? null : verificationToken)
                 .verificationExpires(now.plusHours(24))
                 .createdAt(now)
                 .updatedAt(now)
@@ -61,12 +62,14 @@ public class AuthService {
 
         User savedUser = userRepository.save(newUser);
 
-        String baseUrl = (appBaseUrl != null && !appBaseUrl.contains("localhost")) ? appBaseUrl.replaceAll("/+$", "") : "https://resumebuilderapp-jux7.onrender.com";
-        String link = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
-        try {
-            emailService.sendVerificationEmailAsync(savedUser.getEmail(), savedUser.getName(), link, verificationToken);
-        } catch (Exception emailEx) {
-            log.error("Could not dispatch verification email: {}", emailEx.getMessage());
+        if (!isVerified) {
+            String baseUrl = (appBaseUrl != null && !appBaseUrl.contains("localhost")) ? appBaseUrl.replaceAll("/+$", "") : "https://resumebuilderapp-jux7.onrender.com";
+            String link = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
+            try {
+                emailService.sendVerificationEmailAsync(savedUser.getEmail(), savedUser.getName(), link, verificationToken);
+            } catch (Exception emailEx) {
+                log.error("Could not dispatch verification email: {}", emailEx.getMessage());
+            }
         }
 
         String jwtToken = jwtUtil.generateToken(savedUser.getId());
