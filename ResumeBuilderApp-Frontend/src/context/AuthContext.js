@@ -5,6 +5,7 @@ import apiClient from '../api/apiClient';
 import paymentApi from '../api/paymentApi';
 import storage from '../utils/storage';
 import SHRAWAN_PROFILE_IMAGE_URI from '../constants/shrawanProfileImage';
+import RazorpayModal from '../components/RazorpayModal';
 
 const AuthContext = createContext(null);
 
@@ -77,6 +78,11 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState(null);
+  const [razorpayModalState, setRazorpayModalState] = useState({
+    visible: false,
+    orderData: null,
+    resolve: null,
+  });
 
   useEffect(() => {
     const initAuth = async () => {
@@ -379,16 +385,14 @@ export const AuthProvider = ({ children }) => {
           rzpInstance.open();
         });
       } else {
-        // Test simulation verification for native mobile / non-browser environments
-        await paymentApi.verifyPayment(
-          orderId,
-          'pay_test_' + Date.now(),
-          'test_signature'
-        );
-        const p = await authApi.getProfile();
-        const freshUser = formatUserProfile(p);
-        setUser(freshUser);
-        return { success: true, message: 'Payment verified! Account upgraded to PLUS (Test Gateway).' };
+        // Native mobile / non-browser: Open authentic interactive Razorpay Test Modal!
+        return new Promise((resolve) => {
+          setRazorpayModalState({
+            visible: true,
+            orderData: { orderId, amount, currency, keyId },
+            resolve,
+          });
+        });
       }
     } catch (err) {
       const msg = err.message || 'Payment initiation failed';
@@ -396,6 +400,38 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: msg };
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleModalSuccess = async (rzpPayload) => {
+    try {
+      await paymentApi.verifyPayment(
+        rzpPayload.razorpay_order_id,
+        rzpPayload.razorpay_payment_id,
+        rzpPayload.razorpay_signature
+      );
+      const p = await authApi.getProfile();
+      const freshUser = formatUserProfile(p);
+      setUser(freshUser);
+      const resFn = razorpayModalState.resolve;
+      setRazorpayModalState({ visible: false, orderData: null, resolve: null });
+      if (resFn) {
+        resFn({ success: true, message: 'Payment verified! Account upgraded to PLUS.' });
+      }
+    } catch (err) {
+      const resFn = razorpayModalState.resolve;
+      setRazorpayModalState({ visible: false, orderData: null, resolve: null });
+      if (resFn) {
+        resFn({ success: false, error: err.message || 'Payment verification failed' });
+      }
+    }
+  };
+
+  const handleModalDismiss = () => {
+    const resFn = razorpayModalState.resolve;
+    setRazorpayModalState({ visible: false, orderData: null, resolve: null });
+    if (resFn) {
+      resFn({ success: false, error: 'Payment cancelled' });
     }
   };
 
@@ -442,6 +478,12 @@ export const AuthProvider = ({ children }) => {
       }}
     >
       {children}
+      <RazorpayModal
+        visible={razorpayModalState.visible}
+        orderData={razorpayModalState.orderData}
+        onSuccess={handleModalSuccess}
+        onDismiss={handleModalDismiss}
+      />
     </AuthContext.Provider>
   );
 };

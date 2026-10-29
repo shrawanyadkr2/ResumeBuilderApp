@@ -154,7 +154,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled server exception on path {}", request.getRequestURI(), ex);
 
-        String message = "An internal server error occurred. Please contact sky.devX support.";
+        String message = (ex.getMessage() != null && !ex.getMessage().isBlank())
+                ? ex.getMessage()
+                : "An internal server error occurred. Please contact sky.devX support.";
         if ("dev".equalsIgnoreCase(environment)) {
             message = "Dev error: " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
         }

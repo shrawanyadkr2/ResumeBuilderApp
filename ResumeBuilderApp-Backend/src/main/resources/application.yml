@@ -12,14 +12,14 @@ spring:
       max-request-size: 30MB
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:${MONGODB_URI}}
+      uri: ${SPRING_DATA_MONGODB_URI:${MONGODB_URI:mongodb+srv://shrawanyadkr2:Shrawan2026@cluster0.uyjza.mongodb.net/resumegenie?retryWrites=true&w=majority}}
       database: ${MONGODB_DATABASE:resumegenie}
       auto-index-creation: true
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    host: ${SPRING_MAIL_HOST:smtp-relay.brevo.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    username: ${SPRING_MAIL_USERNAME:b33bd2001@smtp-brevo.com}
+    password: ${SPRING_MAIL_PASSWORD:bsk6zz6BAUuMJQO}
     properties:
       mail:
         smtp:
@@ -29,7 +29,7 @@ spring:
             required: true
           ssl:
             trust: "*"
-          from: ${SPRING_MAIL_FROM:${SPRING_MAIL_USERNAME:noreply@skydevx.com}}
+          from: ${SPRING_MAIL_FROM:${SPRING_MAIL_USERNAME:shrawan29yadav@gmail.com}}
     protocol: smtp
 
 server:

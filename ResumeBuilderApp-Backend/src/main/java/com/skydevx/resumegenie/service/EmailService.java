@@ -47,16 +47,57 @@ public class EmailService {
             return;
         }
 
-        // Option 3: Standard SMTP (Requires ports 587 or 465 to be unblocked by hosting provider)
-        log.info("Sending HTML email to recipient: [{}] via SMTP from: [{}]", to, fromEmail);
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromEmail, "Resume Genie");
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(htmlContent, true);
-        mailSender.send(message);
-        log.info("HTML email successfully submitted to SMTP server for [{}]", to);
+        // Option 3: Primary SMTP Dispatch
+        String effectiveSender = (fromEmail != null && fromEmail.contains("@")) ? fromEmail : "shrawan29yadav@gmail.com";
+        try {
+            log.info("Sending HTML email to recipient: [{}] via primary SMTP from: [{}]", to, effectiveSender);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(effectiveSender, "Resume Genie");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("HTML email successfully submitted to SMTP server for [{}]", to);
+            return;
+        } catch (Exception primaryEx) {
+            log.warn("Primary SMTP dispatch failed ({}), attempting fallback ports (2525, 465)...", primaryEx.getMessage());
+        }
+
+        // Option 4: Alternative ports (2525, 465) on Brevo SMTP to bypass Render port 587 block
+        int[] fallbackPorts = new int[]{2525, 465};
+        for (int port : fallbackPorts) {
+            try {
+                log.info("Attempting fallback SMTP dispatch on port {}...", port);
+                org.springframework.mail.javamail.JavaMailSenderImpl fallbackSender = new org.springframework.mail.javamail.JavaMailSenderImpl();
+                fallbackSender.setHost("smtp-relay.brevo.com");
+                fallbackSender.setPort(port);
+                fallbackSender.setUsername("b33bd2001@smtp-brevo.com");
+                fallbackSender.setPassword("bsk6zz6BAUuMJQO");
+
+                java.util.Properties props = fallbackSender.getJavaMailProperties();
+                props.put("mail.transport.protocol", "smtp");
+                props.put("mail.smtp.auth", "true");
+                if (port == 465) {
+                    props.put("mail.smtp.ssl.enable", "true");
+                } else {
+                    props.put("mail.smtp.starttls.enable", "true");
+                }
+                props.put("mail.smtp.ssl.trust", "*");
+
+                MimeMessage message = fallbackSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(effectiveSender, "Resume Genie");
+                helper.setTo(to);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                fallbackSender.send(message);
+                log.info("Fallback SMTP dispatch on port {} succeeded for [{}]", port, to);
+                return;
+            } catch (Exception fallbackEx) {
+                log.warn("Fallback SMTP on port {} failed: {}", port, fallbackEx.getMessage());
+            }
+        }
     }
 
     private void sendViaResend(String to, String subject, String htmlContent) {
@@ -140,6 +181,9 @@ public class EmailService {
     }
 
     public void sendVerificationEmailAsync(String to, String name, String verificationLink, String code) {
+        log.info("==============================================================");
+        log.info(">>> DISPATCHING VERIFICATION CODE TO [{}]: [{}] <<<", to, code);
+        log.info("==============================================================");
         CompletableFuture.runAsync(() -> {
             try {
                 String codeHtml = (code != null && !code.isBlank()) ? """

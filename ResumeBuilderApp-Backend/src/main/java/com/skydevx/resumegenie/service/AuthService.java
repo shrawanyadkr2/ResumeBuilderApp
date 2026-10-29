@@ -61,9 +61,13 @@ public class AuthService {
 
         User savedUser = userRepository.save(newUser);
 
-        String baseUrl = appBaseUrl.replaceAll("/+$", "");
+        String baseUrl = (appBaseUrl != null) ? appBaseUrl.replaceAll("/+$", "") : "http://localhost:8081";
         String link = baseUrl + "/verify-email?token=" + verificationToken;
-        emailService.sendVerificationEmailAsync(savedUser.getEmail(), savedUser.getName(), link, verificationToken);
+        try {
+            emailService.sendVerificationEmailAsync(savedUser.getEmail(), savedUser.getName(), link, verificationToken);
+        } catch (Exception emailEx) {
+            log.error("Could not dispatch verification email: {}", emailEx.getMessage());
+        }
 
         String jwtToken = jwtUtil.generateToken(savedUser.getId());
         return toAuthResponse(savedUser, jwtToken);
@@ -138,9 +142,13 @@ public class AuthService {
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
 
-        String baseUrl = appBaseUrl.replaceAll("/+$", "");
+        String baseUrl = (appBaseUrl != null) ? appBaseUrl.replaceAll("/+$", "") : "http://localhost:8081";
         String link = baseUrl + "/verify-email?token=" + code;
-        emailService.sendVerificationEmailAsync(user.getEmail(), user.getName(), link, code);
+        try {
+            emailService.sendVerificationEmailAsync(user.getEmail(), user.getName(), link, code);
+        } catch (Exception emailEx) {
+            log.error("Could not dispatch resend verification email: {}", emailEx.getMessage());
+        }
     }
 
     public void forgotPassword(String email) {
