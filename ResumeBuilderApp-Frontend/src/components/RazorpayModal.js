@@ -30,7 +30,7 @@ export const RazorpayModal = ({
       await onSuccess({
         razorpay_order_id: orderId,
         razorpay_payment_id: 'pay_test_' + Date.now(),
-        razorpay_signature: 'simulated_test_signature_valid',
+        razorpay_signature: 'test_signature',
       });
     } finally {
       setIsProcessing(false);
