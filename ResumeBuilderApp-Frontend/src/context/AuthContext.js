@@ -221,53 +221,77 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     setError(null);
     try {
-      let formData = new FormData();
       let rawBase64 = null;
       let rawUri = null;
 
-      if (formDataOrFile instanceof FormData) {
-        formData = formDataOrFile;
-      } else if (formDataOrFile && formDataOrFile.uri) {
-        // Native React Native mobile format
+      if (formDataOrFile && formDataOrFile.uri) {
         rawUri = formDataOrFile.uri;
         if (formDataOrFile.base64) {
           rawBase64 = `data:${formDataOrFile.type || 'image/jpeg'};base64,${formDataOrFile.base64}`;
         }
-        formData.append('file', {
-          uri: formDataOrFile.uri,
-          name: formDataOrFile.name || 'avatar.jpg',
-          type: formDataOrFile.type || 'image/jpeg',
-        });
-      } else {
-        formData.append('file', formDataOrFile);
       }
 
       let imageUrl = null;
-      try {
-        const res = await authApi.uploadProfileImage(formData);
-        imageUrl = res?.imageUrl || (res?.data && res?.data?.imageUrl);
-      } catch (uploadErr) {
-        console.warn('[uploadAvatar] Cloud upload warning, using direct local/base64 fallback:', uploadErr);
-        if (rawBase64) {
-          imageUrl = rawBase64;
-        } else if (rawUri) {
-          imageUrl = rawUri;
+
+      // 1. First priority: Upload base64 directly to Cloudinary endpoint (fastest & most reliable on Android)
+      if (rawBase64) {
+        try {
+          const base64Res = await authApi.uploadAvatarBase64(rawBase64);
+          imageUrl = base64Res?.imageUrl || (base64Res?.data && base64Res?.data?.imageUrl);
+          if (imageUrl && !imageUrl.startsWith('data:')) {
+            console.log('[uploadAvatar] Direct Cloudinary Base64 upload successful:', imageUrl);
+          }
+        } catch (base64Err) {
+          console.warn('[uploadAvatar] Direct Base64 upload warning, trying multipart:', base64Err?.message);
         }
       }
 
-      if (imageUrl) {
-        // Persist profileImageUrl directly to MongoDB Atlas
+      // 2. Second priority: Multipart form-data upload
+      if (!imageUrl || imageUrl.startsWith('data:')) {
         try {
-          const updateRes = await authApi.updateProfile({ profileImageUrl: imageUrl });
+          let formData = new FormData();
+          if (formDataOrFile instanceof FormData) {
+            formData = formDataOrFile;
+          } else if (rawUri) {
+            formData.append('file', {
+              uri: rawUri,
+              name: formDataOrFile.name || 'avatar.jpg',
+              type: formDataOrFile.type || 'image/jpeg',
+            });
+          } else {
+            formData.append('file', formDataOrFile);
+          }
+
+          const res = await authApi.uploadProfileImage(formData);
+          imageUrl = res?.imageUrl || (res?.data && res?.data?.imageUrl);
+          if (imageUrl && !imageUrl.startsWith('data:')) {
+            console.log('[uploadAvatar] Multipart Cloudinary upload successful:', imageUrl);
+          }
+        } catch (uploadErr) {
+          console.warn('[uploadAvatar] Multipart upload warning:', uploadErr?.message);
+        }
+      }
+
+      // 3. Third priority: updateProfile with Base64 fallback (Backend uploads to Cloudinary automatically)
+      if ((!imageUrl || imageUrl.startsWith('data:')) && rawBase64) {
+        try {
+          const updateRes = await authApi.updateProfile({ profileImageUrl: rawBase64 });
           const savedData = updateRes?.data || updateRes;
           if (savedData?.profileImageUrl) {
             imageUrl = savedData.profileImageUrl;
           }
         } catch (dbErr) {
-          console.warn('[uploadAvatar] updateProfile to database error:', dbErr?.message);
+          console.warn('[uploadAvatar] updateProfile fallback warning:', dbErr?.message);
         }
+      }
 
-        // Cache locally for instant loading across re-launches/logins
+      // 4. Final local display fallback if offline
+      if (!imageUrl && rawUri) {
+        imageUrl = rawUri;
+      }
+
+      if (imageUrl) {
+        // Cache locally for instant offline loading
         const userKey = user?.id || user?.email;
         if (userKey) {
           await storage.setItem(`user_avatar_${userKey}`, imageUrl);
@@ -280,9 +304,18 @@ export const AuthProvider = ({ children }) => {
             profileImageUrl: imageUrl,
           };
         });
+        return { success: true, imageUrl, message: 'Profile photo updated successfully!' };
       }
-      return { success: true, imageUrl, message: 'Profile photo updated successfully!' };
+
+      return { success: false, error: 'Could not upload photo. Please check your internet connection.' };
     } catch (err) {
+      const msg = err.message || 'Failed to upload profile picture';
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setIsLoading(false);
+    }
+  };
       const msg = err.message || 'Failed to upload profile picture';
       setError(msg);
       return { success: false, error: msg };

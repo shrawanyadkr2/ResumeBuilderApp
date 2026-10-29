@@ -121,12 +121,32 @@ public class AuthController {
     }
 
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload user profile avatar photo (JPEG, PNG, WebP <= 5MB)")
+    @Operation(summary = "Upload user profile avatar photo (JPEG, PNG, WebP <= 25MB)")
     public ResponseEntity<Map<String, String>> uploadProfileImage(
             @AuthenticationPrincipal User user,
             @RequestParam("file") MultipartFile file) throws IOException {
 
         Map<String, String> result = fileUploadService.uploadUserProfileImage(user, file);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping(value = "/upload-avatar", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Upload user profile avatar as Base64 Data URI directly to Cloudinary")
+    public ResponseEntity<Map<String, String>> uploadAvatarJson(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, String> payload) {
+        String base64Data = payload.get("image");
+        if (base64Data == null || base64Data.isBlank()) {
+            base64Data = payload.get("data");
+        }
+        if (base64Data == null || base64Data.isBlank()) {
+            base64Data = payload.get("profileImageUrl");
+        }
+        if (base64Data == null || base64Data.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No image payload provided"));
+        }
+        String cloudinaryUrl = fileUploadService.uploadDataUriToCloudinary(base64Data, "users");
+        authService.updateProfileImage(user, cloudinaryUrl);
+        return ResponseEntity.ok(Map.of("imageUrl", cloudinaryUrl, "message", "User profile photo uploaded to Cloudinary successfully."));
     }
 }

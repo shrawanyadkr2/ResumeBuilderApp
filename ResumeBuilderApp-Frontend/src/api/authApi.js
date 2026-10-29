@@ -72,6 +72,11 @@ export const authApi = {
     return res?.data || res;
   },
 
+  async uploadAvatarBase64(base64Data) {
+    const res = await apiClient.post('/api/auth/upload-avatar', { image: base64Data });
+    return res?.data || res;
+  },
+
   async logout() {
     await apiClient.setToken(null);
   },

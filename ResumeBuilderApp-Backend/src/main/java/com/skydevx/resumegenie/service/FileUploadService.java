@@ -31,7 +31,7 @@ public class FileUploadService {
             "image/webp"
     );
 
-    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+    private static final long MAX_IMAGE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
 
     public void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
