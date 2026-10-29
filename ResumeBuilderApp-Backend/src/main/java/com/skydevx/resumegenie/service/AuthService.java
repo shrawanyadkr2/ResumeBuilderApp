@@ -49,15 +49,12 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .profileImageUrl(request.getProfileImageUrl())
                 .subscriptionPlan("FREE")
-                .emailVerified(true)
-                .verificationToken(null)
-                .verificationExpires(null)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
         User savedUser = userRepository.save(newUser);
-        log.info("User registered and auto-verified: [{}]", savedUser.getEmail());
+        log.info("User registered successfully: [{}]", savedUser.getEmail());
 
         String jwtToken = jwtUtil.generateToken(savedUser.getId());
         return toAuthResponse(savedUser, jwtToken);
@@ -73,14 +70,6 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password.");
         }
 
-        // Auto-verify any previously unverified user on login
-        if (!existingUser.isEmailVerified()) {
-            existingUser.setEmailVerified(true);
-            existingUser.setVerificationToken(null);
-            existingUser.setUpdatedAt(LocalDateTime.now());
-            existingUser = userRepository.save(existingUser);
-        }
-
         String token = jwtUtil.generateToken(existingUser.getId());
         return toAuthResponse(existingUser, token);
     }
@@ -90,28 +79,16 @@ public class AuthService {
     }
 
     public AuthResponse verifyEmail(String email, String token) {
-        log.info("Verifying email (bypassed/auto-approved): email=[{}], token=[{}]", email, token);
         User user = null;
         if (email != null && !email.isBlank()) {
             user = userRepository.findByEmail(email.toLowerCase().trim()).orElse(null);
         }
-        if (user == null && token != null && !token.isBlank()) {
-            user = userRepository.findByVerificationToken(token.trim()).orElse(null);
-        }
-        if (user != null) {
-            user.setEmailVerified(true);
-            user.setVerificationToken(null);
-            user.setVerificationExpires(null);
-            user.setUpdatedAt(LocalDateTime.now());
-            user = userRepository.save(user);
-        }
         String jwtToken = user != null ? jwtUtil.generateToken(user.getId()) : "";
-        return toAuthResponse(user != null ? user : User.builder().email(email).name("User").emailVerified(true).build(), jwtToken);
+        return toAuthResponse(user != null ? user : User.builder().email(email).name("User").build(), jwtToken);
     }
 
     public String resendVerification(String email) {
-        log.info("Verification not required. Returning instant success for email: [{}]", email);
-        return "123456";
+        return "SUCCESS";
     }
 
     public void forgotPassword(String email) {

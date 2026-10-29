@@ -108,7 +108,6 @@ class AuthServiceTest {
                 .email("alex@skydevx.com")
                 .password("$2a$12$hashedPassword")
                 .subscriptionPlan("FREE")
-                .emailVerified(true)
                 .build();
 
         when(userRepository.findByEmail("alex@skydevx.com")).thenReturn(Optional.of(existingUser));
@@ -140,28 +139,5 @@ class AuthServiceTest {
         when(passwordEncoder.matches("WrongPassword", "$2a$12$hashedPassword")).thenReturn(false);
 
         assertThrows(BadCredentialsException.class, () -> authService.login(request));
-    }
-
-    @Test
-    @DisplayName("Email verification with valid token should set emailVerified to true")
-    void shouldVerifyEmailWithValidToken() {
-        String token = "valid-verification-token-123";
-        User user = User.builder()
-                .id("user_123")
-                .email("alex@skydevx.com")
-                .verificationToken(token)
-                .verificationExpires(LocalDateTime.now().plusHours(12))
-                .emailVerified(false)
-                .build();
-
-        when(userRepository.findByVerificationToken(token)).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken("user_123")).thenReturn("mocked.jwt.token");
-
-        AuthResponse res = authService.verifyEmail(token);
-
-        assertTrue(user.isEmailVerified());
-        assertNull(user.getVerificationToken());
-        assertNotNull(res);
-        verify(userRepository).save(user);
     }
 }

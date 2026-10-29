@@ -43,13 +43,6 @@ public class User {
     @Builder.Default
     private String subscriptionPlan = "FREE"; // FREE or PLUS
 
-    @Builder.Default
-    private boolean emailVerified = true;
-
-    private String verificationToken;
-
-    private LocalDateTime verificationExpires;
-
     @Indexed
     private String passwordResetToken;
 
