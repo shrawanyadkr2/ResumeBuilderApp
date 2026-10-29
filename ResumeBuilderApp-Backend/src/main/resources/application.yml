@@ -45,9 +45,9 @@ app:
   branding: "sky.devX"
   name: "Resume Genie"
   client:
-    url: ${APP_BASE_URL:http://localhost:8081}
+    url: ${APP_BASE_URL:https://resumebuilderapp-jux7.onrender.com}
   backend:
-    url: ${BACKEND_BASE_URL:http://localhost:8080}
+    url: ${BACKEND_BASE_URL:https://resumebuilderapp-jux7.onrender.com}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006,http://localhost:3000,http://localhost:5173}
   verification:

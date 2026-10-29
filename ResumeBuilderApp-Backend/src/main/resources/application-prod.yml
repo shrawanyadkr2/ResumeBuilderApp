@@ -44,6 +44,10 @@ logging:
 
 app:
   environment: prod
+  client:
+    url: ${APP_BASE_URL:https://resumebuilderapp-jux7.onrender.com}
+  backend:
+    url: ${BACKEND_BASE_URL:https://resumebuilderapp-jux7.onrender.com}
   verification:
     required: ${EMAIL_VERIFICATION_REQUIRED:true} # Production enforces email verification by default
   cors:

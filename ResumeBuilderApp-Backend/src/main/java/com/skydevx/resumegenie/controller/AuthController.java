@@ -45,11 +45,65 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Login successful.", response));
     }
 
-    @GetMapping("/verify-email")
+    @GetMapping(value = "/verify-email", produces = MediaType.TEXT_HTML_VALUE)
     @Operation(summary = "Verify account email address via confirmation token (Browser link)")
-    public ResponseEntity<ApiResponse<AuthResponse>> verifyEmailGet(@RequestParam("token") String token) {
-        AuthResponse response = authService.verifyEmail(token);
-        return ResponseEntity.ok(ApiResponse.ok("Email verified successfully! You may now sign in.", response));
+    public ResponseEntity<String> verifyEmailGet(@RequestParam("token") String token) {
+        try {
+            authService.verifyEmail(token);
+            String html = """
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Email Verified - Resume Genie</title>
+                  <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #090D16; color: #F8FAFC; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+                    .card { background: #0F172A; border: 1px solid #1E293B; border-radius: 20px; padding: 48px 32px; text-align: center; max-width: 440px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
+                    .icon { font-size: 64px; margin-bottom: 20px; display: inline-block; }
+                    h1 { color: #10B981; font-size: 26px; font-weight: 800; margin: 0 0 12px 0; }
+                    p { color: #94A3B8; font-size: 15px; line-height: 1.6; margin: 0 0 28px 0; }
+                    .badge { background: rgba(0, 102, 255, 0.15); color: #38BDF8; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid #0284C7; display: inline-block; }
+                  </style>
+                </head>
+                <body>
+                  <div class="card">
+                    <div class="icon">✅</div>
+                    <h1>Email Verified!</h1>
+                    <p>Your Resume Genie account is now verified and active. You can return to the mobile app and sign in right away.</p>
+                    <div class="badge">POWERED BY SKY.DEVX</div>
+                  </div>
+                </body>
+                </html>
+                """;
+            return ResponseEntity.ok(html);
+        } catch (Exception ex) {
+            String errorHtml = """
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Verification Status - Resume Genie</title>
+                  <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #090D16; color: #F8FAFC; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+                    .card { background: #0F172A; border: 1px solid #1E293B; border-radius: 20px; padding: 48px 32px; text-align: center; max-width: 440px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
+                    .icon { font-size: 64px; margin-bottom: 20px; display: inline-block; }
+                    h1 { color: #38BDF8; font-size: 24px; font-weight: 800; margin: 0 0 12px 0; }
+                    p { color: #94A3B8; font-size: 15px; line-height: 1.6; margin: 0 0 28px 0; }
+                  </style>
+                </head>
+                <body>
+                  <div class="card">
+                    <div class="icon">ℹ️</div>
+                    <h1>Verification Notice</h1>
+                    <p>%s</p>
+                  </div>
+                </body>
+                </html>
+                """.formatted(ex.getMessage() != null ? ex.getMessage() : "Invalid or expired token. If you already verified, please sign in.");
+            return ResponseEntity.ok(errorHtml);
+        }
     }
 
     @PostMapping("/verify-email")
